@@ -9,7 +9,8 @@
 			"recommended": true,
 			"suspicious": {
 				"noExplicitAny": "off",
-				"noRedeclare": "off"
+				"noRedeclare": "off",
+				"noEmptyInterface": "off"
 			},
 			"nursery": {
 				"useGroupedTypeImport": "error"

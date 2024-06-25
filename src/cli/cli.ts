@@ -24,7 +24,7 @@ import type {
 } from '../graphql/gen/graphql';
 import { readLocalSchema, type Config } from './index';
 import { createClient } from '../client/gql-client';
-import { Introspection, diffSchemas, introspectRemoteSchema } from '../client/diff';
+import { type Introspection, diffSchemas, introspectRemoteSchema } from '../client/diff';
 
 const argsSchema = object({
 	'--config': optional(string(), 'tento.config.ts'),

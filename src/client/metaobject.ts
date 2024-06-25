@@ -1,49 +1,50 @@
-import { Field, fields } from './field';
-import type {
-	MetaobjectDefinitionConfig,
-	InferSelectModel,
-	InferUpdateModel,
-	InferBaseModel,
-	MetaobjectDefinition,
-	MetaobjectFieldDefinition,
-} from './types';
+import type { MetaobjectDefinitionCreateInput } from '../graphql/gen/graphql';
+import { MetaobjectField, metaobjectFields, type MetaobjectFieldBuilder } from './fields/metaobject-fields';
+import type { TentoMetaobjectDefinition, InferSelectModel, InferUpdateModel, InferInsertModel } from './types';
 
 const isMetaobjectSym = Symbol.for('tento:isMetaobject');
 
-export class Metaobject<TBaseModel extends Record<string, any>> {
-	// @ts-expect-error - this symbol is used in the instanceof check below
+export interface TentoMetaobjectTypeConfig {
+	selectModel: unknown;
+	insertModel: unknown;
+	updateModel: unknown;
+}
+
+export class Metaobject<TFields extends Record<string, MetaobjectFieldBuilder>> {
 	private readonly [isMetaobjectSym] = true;
 
 	/** @internal */
-	fieldKeysMap: Record<string, string> = {};
-
-	/** @internal */
-	fields: Record<string, Field<any>>;
+	readonly fieldKeysMap: Record<string, string> = {};
 
 	readonly _: {
-		readonly config: MetaobjectDefinition;
+		readonly createConfig: MetaobjectDefinitionCreateInput;
+		readonly config: TentoMetaobjectDefinition;
+		readonly fieldBuilders: TFields;
+		readonly fields: Record<string, MetaobjectField>;
 	};
-	declare readonly $inferSelect: InferSelectModel<TBaseModel>;
-	declare readonly $inferInsert: TBaseModel;
-	declare readonly $inferUpdate: InferUpdateModel<TBaseModel>;
+	declare readonly $inferSelect: InferSelectModel<this>;
+	declare readonly $inferInsert: InferInsertModel<this>;
+	declare readonly $inferUpdate: InferUpdateModel<this>;
 
-	constructor(config: MetaobjectDefinitionConfig) {
-		this.fields = config.fieldDefinitions(fields);
-		const fieldDefinitions: MetaobjectFieldDefinition[] = [];
+	constructor(config: TentoMetaobjectDefinition) {
+		const builders = config.fieldDefinitions(metaobjectFields);
+		const fields = Object.fromEntries(
+			Object.entries(builders).map(([key, builder]) => {
+				const field = new MetaobjectField(builder, key);
+				this.fieldKeysMap[key] = field._.config.key;
+				return [key, field];
+			}),
+		);
+		const fieldDefinitions = Object.values(fields).map((f) => f._.config);
 
-		for (const [key, value] of Object.entries(this.fields)) {
-			const definition: MetaobjectFieldDefinition = {
-				...value._.config,
-				key: value._.config.key ?? key,
-			};
-			fieldDefinitions.push(definition);
-			this.fieldKeysMap[key] = definition.key;
-		}
 		this._ = {
-			config: {
+			config,
+			createConfig: {
 				...config,
 				fieldDefinitions,
 			},
+			fieldBuilders: builders as TFields,
+			fields,
 		};
 	}
 
@@ -57,6 +58,8 @@ export class Metaobject<TBaseModel extends Record<string, any>> {
 	}
 }
 
-export function metaobject<T extends MetaobjectDefinitionConfig>(config: T): Metaobject<InferBaseModel<T>> {
+export function metaobject<T extends TentoMetaobjectDefinition>(
+	config: T,
+): Metaobject<ReturnType<T['fieldDefinitions']>> {
 	return new Metaobject(config);
 }

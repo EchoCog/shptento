@@ -1,17 +1,15 @@
 import { Metaobject } from './metaobject';
 import type {
-	ExtractSchema,
 	IteratorConfig,
 	KnownKeysOnly,
-	ListConfig,
+	MetaobjectListConfig,
 	ListConfigFields,
-	ListConfigQuery,
+	MetaobjectListConfigQuery,
 	ListConfigQueryItem,
 	ListResult,
 	ResultItem,
 	UpdateConfig,
 } from './types';
-import { Field, dateTime, singleLineTextField } from './field';
 
 import type {
 	InputMaybe,
@@ -20,22 +18,32 @@ import type {
 	MetaobjectUserError,
 } from '../graphql/gen/graphql';
 import { graphql } from '../graphql/gen';
-import { type Client, ClientSource, createClientFromSource } from './gql-client';
+import { type Client, type ClientSource, createClientFromSource } from './gql-client';
 import { applySchema } from './apply-schema';
+import { MetaobjectFieldBuilder, dateTime, singleLineTextField } from './fields/metaobject-fields';
+import { Metafield, TentoMetafieldOperations } from './metafield';
 
-export class Tento<TSchema extends Record<string, Metaobject<any>>> {
+export class Tento<TSchema extends Record<string, unknown>> {
 	readonly _: {
 		readonly client: Client;
 		readonly schema: TSchema;
 	};
 
 	metaobjects: TentoMetaobjectOperationsMap<TSchema>;
+	metafields: TentoMetafieldOperationsMap<TSchema>;
 
 	constructor(client: Client, schema: TSchema) {
 		this._ = { client, schema };
 		this.metaobjects = Object.fromEntries(
-			Object.entries(schema).map(([key, metaobject]) => [key, new ShopifyMetaobjectOperations(metaobject, client)]),
+			Object.entries(schema)
+				.filter((e): e is [string, Metaobject<any>] => e[1] instanceof Metaobject)
+				.map(([key, metaobject]) => [key, new TentoMetaobjectOperations(metaobject, client)]),
 		) as TentoMetaobjectOperationsMap<TSchema>;
+		this.metafields = Object.fromEntries(
+			Object.entries(schema)
+				.filter((e): e is [string, Metafield<any>] => e[1] instanceof Metafield)
+				.map(([key, metafield]) => [key, new TentoMetafieldOperations(metafield, client)]),
+		) as TentoMetafieldOperationsMap<TSchema>;
 	}
 
 	async applySchema() {
@@ -46,15 +54,15 @@ export class Tento<TSchema extends Record<string, Metaobject<any>>> {
 	}
 }
 
-const metaFields: Record<string, Field<any>> = {
-	_id: singleLineTextField(),
-	_handle: singleLineTextField(),
-	_updatedAt: dateTime(),
+const metaFields: Record<string, MetaobjectFieldBuilder> = {
+	_id: singleLineTextField({ required: true }),
+	_handle: singleLineTextField({ required: true }),
+	_updatedAt: dateTime({ required: true }),
 };
 
 const metaFieldNames = Object.keys(metaFields);
 
-export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
+export class TentoMetaobjectOperations<T extends Metaobject<any>> {
 	readonly _: {
 		readonly metaobject: T;
 	};
@@ -110,13 +118,16 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		const result: Record<string, unknown> = {};
 		for (const key of metaFieldNames) {
 			if (allSelectedFieldsMap[key]) {
-				result[key] = metaFields[key]!.fromAPIValue(node[key]);
+				result[key] = metaFields[key]!._.dataType.fromAPIValue(node[key]);
 			}
 		}
 		for (let i = 0; i < selectedFields.length; i++) {
 			const key = selectedFields[i]!;
 			const rawValue = node[`field${i}`]?.value ?? null;
-			result[key] = rawValue === null ? rawValue : this._.metaobject.fields[key]!.fromAPIValue(node[`field${i}`].value);
+			result[key] =
+				rawValue === null
+					? rawValue
+					: this._.metaobject._.fields[key]!._.dataType.fromAPIValue(node[`field${i}`].value);
 		}
 		return result as any;
 	}
@@ -129,8 +140,8 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		${selectedFields.map((_, i) => `field${i}: field(key: $field${i}) { value }`).join(', ')}`;
 	}
 
-	async list<TConfig extends ListConfig<T>>(
-		config: KnownKeysOnly<TConfig, ListConfig<T>>,
+	async list<TConfig extends MetaobjectListConfig<T>>(
+		config: KnownKeysOnly<TConfig, MetaobjectListConfig<T>>,
 	): Promise<ListResult<T, TConfig['fields']>> {
 		const allSelectedFieldsMap = this.getSelectedFields(config.fields);
 		const allSelectedFields = Object.keys(allSelectedFieldsMap);
@@ -154,7 +165,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		`;
 
 		const response = await this.client(query, {
-			type: this._.metaobject._.config.type,
+			type: this._.metaobject._.createConfig.type,
 			query: buildListQuery(config.query),
 			after: config.after,
 			before: config.before,
@@ -207,7 +218,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			return undefined;
 		}
 
-		return this.mapItemResult(response.data.metaobject, allSelectedFieldsMap, selectedFields);
+		return this.mapItemResult<TFields>(response.data.metaobject, allSelectedFieldsMap, selectedFields);
 	}
 
 	async *iterator<TConfig extends IteratorConfig<T>>(
@@ -240,7 +251,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 					}`;
 
 			const response = await this.client(query, {
-				type: this._.metaobject._.config.type,
+				type: this._.metaobject._.createConfig.type,
 				query: buildListQuery(config.query),
 				after: cursor,
 				first: pageSize,
@@ -290,7 +301,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 				continue;
 			}
 			const resultKey = this._.metaobject.fieldKeysMap[k];
-			const field = this._.metaobject.fields[k];
+			const field = this._.metaobject._.fields[k];
 			if (!resultKey || !field) {
 				throw new Error(`Unknown field "${k}"`);
 			}
@@ -299,7 +310,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			}
 			metaobjectUpdateInput.fields.push({
 				key: resultKey,
-				value: field.toAPIValue(v),
+				value: field._.dataType.toAPIValue(v),
 			});
 		}
 
@@ -332,16 +343,16 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 
 		const result = await this.client(query, {
 			metaobject: {
-				type: this._.metaobject._.config.type,
+				type: this._.metaobject._.createConfig.type,
 				fields: Object.entries(item).map(([key, value]) => {
-					const field = this._.metaobject.fields[key];
+					const field = this._.metaobject._.fields[key];
 					if (!field) {
 						throw new Error(`Unknown field "${key}"`);
 					}
 
 					return {
 						key: this._.metaobject.fieldKeysMap[key],
-						value: field.toAPIValue(value),
+						value: field._.dataType.toAPIValue(value),
 					};
 				}),
 			},
@@ -363,7 +374,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		const allSelectedFields = Object.keys(allSelectedFieldsMap);
 		const selectedFields = allSelectedFields.filter((f) => !metaFieldNames.includes(f));
 
-		return this.mapItemResult(result.data.metaobjectInsert.metaobject, allSelectedFieldsMap, selectedFields);
+		return this.mapItemResult(
+			result.data.metaobjectInsert.metaobject,
+			allSelectedFieldsMap,
+			selectedFields,
+		) as ResultItem<T, undefined>;
 	}
 
 	async delete(id: string) {
@@ -399,7 +414,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 
 		const result = await this.client(query, {
 			ids,
-			type: this._.metaobject._.config.type,
+			type: this._.metaobject._.createConfig.type,
 		});
 
 		if (result.errors) {
@@ -412,8 +427,16 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 	}
 }
 
-export type TentoMetaobjectOperationsMap<TSchema extends Record<string, Metaobject<any>>> = {
-	[K in keyof TSchema]: ShopifyMetaobjectOperations<TSchema[K]>;
+export type TentoMetaobjectOperationsMap<TSchema extends Record<string, unknown>> = {
+	[K in keyof TSchema as TSchema[K] extends Metaobject<any> ? K : never]: TSchema[K] extends Metaobject<any>
+		? TentoMetaobjectOperations<TSchema[K]>
+		: never;
+};
+
+export type TentoMetafieldOperationsMap<TSchema extends Record<string, unknown>> = {
+	[K in keyof TSchema as TSchema[K] extends Metafield<any> ? K : never]: TSchema[K] extends Metafield<any>
+		? TentoMetafieldOperations<TSchema[K]>
+		: never;
 };
 
 export interface TentoConfig<TSchema extends Record<string, unknown>> {
@@ -421,14 +444,9 @@ export interface TentoConfig<TSchema extends Record<string, unknown>> {
 	schema: TSchema;
 }
 
-export function tento<TSchema extends Record<string, unknown>>(
-	config: TentoConfig<TSchema>,
-): Tento<ExtractSchema<TSchema>> {
-	const { client: clientSource, schema: rawSchema } = config;
+export function tento<TSchema extends Record<string, unknown>>(config: TentoConfig<TSchema>): Tento<TSchema> {
+	const { client: clientSource, schema } = config;
 	const client = createClientFromSource(clientSource);
-	const schema = Object.fromEntries(
-		Object.entries(rawSchema).filter((e): e is [(typeof e)[0], Metaobject<any>] => e[1] instanceof Metaobject),
-	) as ExtractSchema<TSchema>;
 	return new Tento(client, schema);
 }
 
@@ -463,7 +481,7 @@ export function buildListQueryItem(query: ListConfigQueryItem<string | number | 
 	throw new Error(`Invalid query item: ${JSON.stringify(query)}`);
 }
 
-export function buildListQuery(query: ListConfigQuery | undefined): string | undefined {
+export function buildListQuery(query: MetaobjectListConfigQuery | undefined): string | undefined {
 	if (query === undefined) {
 		return undefined;
 	}

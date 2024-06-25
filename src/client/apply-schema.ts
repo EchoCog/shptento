@@ -16,7 +16,7 @@ export async function applySchema({
 	const localSchema = Object.fromEntries(
 		Object.entries(rawLocalSchema)
 			.filter((e): e is [(typeof e)[0], Metaobject<any>] => e[1] instanceof Metaobject)
-			.map(([key, value]) => [key, value._.config]),
+			.map(([key, value]) => [key, value._.createConfig]),
 	);
 	console.log(Object.entries(rawLocalSchema));
 	console.log(JSON.stringify({ localSchema }, null, 2));

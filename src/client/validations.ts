@@ -1,6 +1,7 @@
-import type { MetafieldDefinitionValidationInput } from './types';
+import type { MetafieldDefinitionValidationInput } from '../graphql/gen/graphql';
 
-export type Validations = Record<string, (...args: any[]) => MetafieldDefinitionValidationInput>;
+export type Validation = (...args: any[]) => MetafieldDefinitionValidationInput;
+export type Validations = Record<string, Validation>;
 
 export function min(value: string): MetafieldDefinitionValidationInput {
 	return { name: 'min', value };

@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { object, record, string, type Input } from 'valibot';
-import { Metaobject, type MetaobjectDefinition } from '@drizzle-team/tento';
+import { Metaobject, type TentoMetaobjectDefinition } from '@drizzle-team/tento';
 
 export async function readLocalSchema(schemaPath: string) {
 	const importResult = await import(path.resolve(schemaPath));
-	const schema: Record<string, MetaobjectDefinition> = {};
+	const schema: Record<string, TentoMetaobjectDefinition> = {};
 	for (const key in importResult) {
 		const value = importResult[key];
 		if (value instanceof Metaobject) {

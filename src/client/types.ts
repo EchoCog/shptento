@@ -1,152 +1,65 @@
 import type {
-	MetaobjectAdminAccess,
-	MetaobjectCapabilityCreateInput,
-	MetaobjectStorefrontAccess,
+	MetafieldDefinitionValidationInput,
+	MetaobjectDefinitionCreateInput,
+	MetaobjectFieldDefinitionCreateInput,
 } from '../graphql/gen/graphql';
-import type { Field, Fields } from './field';
+import type { MetaobjectFieldBuilder, MetaobjectFields } from './fields/metaobject-fields';
 import type { Metaobject } from './metaobject';
 
-export type InferBaseModel<T extends MetaobjectDefinitionConfig> = ReturnType<
-	T['fieldDefinitions']
-> extends infer TFields extends Record<string, Field<any>>
-	? {
-			[K in keyof TFields]: TFields[K]['_']['type'];
-	  }
-	: never;
+export type InferInsertModel<T extends Metaobject<Record<string, MetaobjectFieldBuilder<any>>>> = Simplify<
+	{
+		_handle?: string;
+	} & {
+		[K in keyof T['_']['fieldBuilders'] as T['_']['fieldBuilders'][K]['_']['optional'] extends true
+			? K
+			: never]: T['_']['fieldBuilders'][K]['_']['dataType'];
+	} & {
+		[K in keyof T['_']['fieldBuilders'] as T['_']['fieldBuilders'][K]['_']['optional'] extends false ? K : never]?:
+			| T['_']['fieldBuilders'][K]['_']['dataType']
+			| null;
+	}
+>;
 
 export type Simplify<T> = {
 	[K in keyof T]: T[K];
 } & {};
 
-export type InferSelectModel<TBase> = Simplify<
+export type InferSelectModel<T extends Metaobject<Record<string, MetaobjectFieldBuilder<any>>>> = Simplify<
 	{
 		_id: string;
 		_handle: string;
 		_updatedAt: Date;
-	} & TBase
+	} & {
+		[K in keyof T['_']['fieldBuilders']]:
+			| T['_']['fieldBuilders'][K]['_']['dataType']
+			| (T['_']['fieldBuilders'][K]['_']['optional'] extends true ? null : never);
+	}
 >;
 
-export type InferUpdateModel<TBase> = Simplify<
-	Partial<
-		{
-			_handle: string;
-		} & TBase
-	>
+export type InferUpdateModel<T extends Metaobject<Record<string, MetaobjectFieldBuilder<any>>>> = Simplify<
+	{
+		_handle?: string;
+	} & {
+		[K in keyof T['_']['fieldBuilders']]?: T['_']['fieldBuilders'][K]['_']['dataType'];
+	}
 >;
 
-/** The input fields for creating a metaobject definition. */
-export type MetaobjectDefinitionConfig = {
-	/** Access configuration for the metaobjects created with this definition. */
-	access?: MetaobjectAccessInput;
-	/** The capabilities of the metaobject definition. */
-	capabilities?: MetaobjectCapabilityCreateInput;
-	/** An administrative description of the definition. */
-	description?: string;
-	/** The key of a field to reference as the display name for metaobjects of this type. */
-	displayNameKey?: string;
-	/** A set of field definitions to create on this metaobject definition. */
-	fieldDefinitions: (fields: Fields) => Record<string, Field<any>>;
-	/** A human-readable name for the definition. This can be changed at any time. */
-	name?: string;
-	/**
-	 * The type of the metaobject definition. This can't be changed.
-	 *
-	 * Must be 3-255 characters long and only contain alphanumeric, hyphen, and underscore characters.
-	 *
-	 */
-	type: string;
-};
-
-/** The input fields for creating a metaobject definition. */
-export type MetaobjectDefinition = Omit<MetaobjectDefinitionConfig, 'fieldDefinitions'> & {
-	/** A set of field definitions to create on this metaobject definition. */
-	fieldDefinitions: MetaobjectFieldDefinition[];
-};
-
-export interface MetaobjectFieldDefinitions {
-	[key: string]: Omit<MetaobjectFieldDefinitionConfig<any>, 'key'>;
+export interface TentoMetaobjectDefinition extends Omit<MetaobjectDefinitionCreateInput, 'fieldDefinitions'> {
+	fieldDefinitions: (fields: MetaobjectFields) => Record<string, MetaobjectFieldBuilder>;
 }
 
-/** The input fields for creating a metaobject field definition. */
-export interface MetaobjectFieldDefinitionConfig<
+export interface TentoMetaobjectFieldDefinitionInput<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput> = Record<string, never>,
-> {
-	/** An administrative description of the field. */
-	description?: string;
-	/** A human-readable name for the field. This can be changed at any time. */
-	name?: string;
-	/** Whether metaobjects require a saved value for the field. */
-	required?: boolean;
-	/**
-	 * The key of the new field definition. This can't be changed.
-	 *
-	 * Must be 3-64 characters long and only contain alphanumeric, hyphen, and underscore characters.
-	 *
-	 */
+> extends Omit<MetaobjectFieldDefinitionCreateInput, 'key' | 'type' | 'validations'> {
 	key?: string;
-	/** Custom validations that apply to values assigned to the field. */
 	validations?: (validators: TValidators) => MetafieldDefinitionValidationInput[];
 }
 
 export interface MetaobjectFieldDefinitionConfigWithType<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput>,
-> extends MetaobjectFieldDefinitionConfig<TValidators> {
+> extends TentoMetaobjectFieldDefinitionInput<TValidators> {
 	type: string;
 }
-
-/** The input fields for creating a metaobject field definition. */
-export type MetaobjectFieldDefinition = Omit<MetaobjectFieldDefinitionConfig<any>, 'validations' | 'key'> & {
-	/**
-	 * The key of the new field definition. This can't be changed.
-	 *
-	 * Must be 3-64 characters long and only contain alphanumeric, hyphen, and underscore characters.
-	 *
-	 */
-	key: string;
-	/** The metafield type applied to values of the field. */
-	type: string;
-	/** Custom validations that apply to values assigned to the field. */
-	validations: MetafieldDefinitionValidationInput[] | undefined;
-};
-
-export type MetaobjectFieldDefinitionBuilder = Omit<MetaobjectFieldDefinition, 'key'> &
-	Partial<Pick<MetaobjectFieldDefinition, 'key'>>;
-
-/**
- * The name and value for a metafield definition validation.
- *
- * For example, for a metafield definition of `single_line_text_field` type, you can set a validation with the name `min` and a value of `10`.
- * This validation will ensure that the value of the metafield is at least 10 characters.
- *
- * Refer to the [list of supported validations](https://shopify.dev/api/admin/graphql/reference/common-objects/metafieldDefinitionTypes#examples-Fetch_all_metafield_definition_types).
- *
- */
-export type MetafieldDefinitionValidationInput = {
-	/** The name for the metafield definition validation. */
-	name: string;
-	/** The value for the metafield definition validation. */
-	value: string;
-};
-
-/** The input fields for configuring metaobject access controls. */
-export type MetaobjectAccessInput = {
-	/**
-	 * Access configuration for Admin API surface areas, including the GraphQL Admin API.
-	 *
-	 */
-	admin?: MetaobjectAdminAccess;
-	/**
-	 * Access configuration for Storefront API surface areas, including the GraphQL Storefront API and Liquid.
-	 *
-	 */
-	storefront?: MetaobjectStorefrontAccess;
-};
-
-export type ExtractSchema<TSchema extends Record<string, unknown>> = Simplify<{
-	[K in keyof TSchema as TSchema[K] extends Metaobject<any> ? K : never]: TSchema[K] extends Metaobject<any>
-		? TSchema[K]
-		: never;
-}>;
 
 export type KnownKeysOnly<T, U> = {
 	[K in keyof T]: K extends keyof U ? T[K] : never;
@@ -191,7 +104,7 @@ export type ListConfigQueryItem<T> =
 	  }
 	| T;
 
-export type ListConfigQuery =
+export type MetaobjectListConfigQuery =
 	| string
 	| {
 			displayName?: ListConfigQueryItem<string>;
@@ -207,13 +120,13 @@ export type ListConfigQuery =
 			/**
 			 * A list of queries that are combined with `OR`.
 			 */
-			$or: ListConfigQuery[];
+			$or: MetaobjectListConfigQuery[];
 	  }
-	| ListConfigQuery[];
+	| MetaobjectListConfigQuery[];
 
-export interface ListConfig<T extends Metaobject<any>> {
+export interface MetaobjectListConfig<T extends Metaobject<any>> {
 	fields?: ListConfigFields<T>;
-	query?: ListConfigQuery;
+	query?: MetaobjectListConfigQuery;
 	after?: string;
 	before?: string;
 	first?: number;
@@ -224,7 +137,7 @@ export interface ListConfig<T extends Metaobject<any>> {
 
 export interface IteratorConfig<T extends Metaobject<any>> {
 	fields?: ListConfigFields<T>;
-	query?: ListConfigQuery;
+	query?: MetaobjectListConfigQuery;
 	reverse?: boolean;
 	sortKey?: SortKey;
 	pageSize?: number;
