@@ -1,24 +1,19 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-
-import type {
-	MetaobjectFieldDefinitionBuilder,
-	MetaobjectFieldDefinitionConfig,
-	MetaobjectFieldDefinitionConfigWithType,
-} from './types';
-import { allowedDomains, choices, fileTypes, max, maxPrecision, min, regex, type Validations } from './validations';
+import { allowedDomains, choices, fileTypes, max, maxPrecision, metaobjectDefinition, min, regex, type Validations } from '../validations';
+import { MetafieldFieldDefinitionBuilder, MetafieldFieldDefinitionConfig, MetafieldFieldDefinitionConfigWithType } from './types';
 
 dayjs.extend(utc);
 
 export abstract class Field<T> {
 	declare readonly _: {
 		readonly type: T;
-		readonly config: MetaobjectFieldDefinitionBuilder;
+		readonly config: MetafieldFieldDefinitionBuilder;
 	};
 
-	constructor(config: MetaobjectFieldDefinitionConfigWithType<any>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfigWithType<any>, validations: Validations) {
 		this._ = {
-			config: buildMetaobjectFieldDefinition(config, validations),
+			config: buildMetafieldFieldDefinitionConfig(config, validations),
 			type: undefined as T,
 		};
 	}
@@ -40,10 +35,10 @@ export abstract class Field<T> {
 	}
 }
 
-export function buildMetaobjectFieldDefinition(
-	config: MetaobjectFieldDefinitionConfigWithType<any>,
+export function buildMetafieldFieldDefinitionConfig(
+	config: MetafieldFieldDefinitionConfigWithType<any>,
 	validations: Validations,
-): MetaobjectFieldDefinitionBuilder {
+): MetafieldFieldDefinitionBuilder {
 	return {
 		...config,
 		validations: config.validations?.(validations),
@@ -60,30 +55,29 @@ export const fields = {
 	date,
 	dateList,
 	dateTime,
-	// product,
-	// productList,
-	// file,
-	// fileList,
 	dimension,
 	dimensionList,
 	volume,
 	volumeList,
 	weight,
 	weightList,
+	metaobjectReference,
+	// file,
+	// fileList,
 };
 
 export type Fields = typeof fields;
 
 export class SingleLineTextField extends Field<string> {
-	constructor(config: MetaobjectFieldDefinitionConfig<SingleLineTextFieldValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<SingleLineTextFieldValidations>, validations: Validations) {
 		super({ ...config, type: 'single_line_text_field' }, validations);
 	}
 }
 
-export function singleLineTextField<T extends MetaobjectFieldDefinitionConfig<SingleLineTextFieldValidations>>(
+export function singleLineTextField<T extends MetafieldFieldDefinitionConfig<SingleLineTextFieldValidations>>(
 	config?: T,
 ): SingleLineTextField {
-	return new SingleLineTextField(config ?? {}, singleLineTextFieldValidations);
+	return new SingleLineTextField(config as any ?? {}, singleLineTextFieldValidations);
 }
 
 export const singleLineTextFieldValidations = {
@@ -100,15 +94,15 @@ export const singleLineTextFieldValidations = {
 export type SingleLineTextFieldValidations = typeof singleLineTextFieldValidations;
 
 export class SingleLineTextListField extends Field<string[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<SingleLineTextListFieldValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<SingleLineTextListFieldValidations>, validations: Validations) {
 		super({ ...config, type: 'list.single_line_text_field' }, validations);
 	}
 }
 
-export function singleLineTextList<T extends MetaobjectFieldDefinitionConfig<SingleLineTextListFieldValidations>>(
+export function singleLineTextList<T extends MetafieldFieldDefinitionConfig<SingleLineTextListFieldValidations>>(
 	config?: T,
 ): SingleLineTextListField {
-	return new SingleLineTextListField(config ?? {}, singleLineTextListFieldValidations);
+	return new SingleLineTextListField(config as any ?? {}, singleLineTextListFieldValidations);
 }
 
 export const singleLineTextListFieldValidations = singleLineTextFieldValidations;
@@ -116,15 +110,15 @@ export const singleLineTextListFieldValidations = singleLineTextFieldValidations
 export type SingleLineTextListFieldValidations = typeof singleLineTextListFieldValidations;
 
 export class MultiLineTextField extends Field<string> {
-	constructor(config: MetaobjectFieldDefinitionConfig<MultiLineTextFieldValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<MultiLineTextFieldValidations>, validations: Validations) {
 		super({ ...config, type: 'multi_line_text_field' }, validations);
 	}
 }
 
-export function multiLineTextField<T extends MetaobjectFieldDefinitionConfig<MultiLineTextFieldValidations>>(
+export function multiLineTextField<T extends MetafieldFieldDefinitionConfig<MultiLineTextFieldValidations>>(
 	config?: T,
 ): MultiLineTextField {
-	return new MultiLineTextField(config ?? {}, multiLineTextFieldValidations);
+	return new MultiLineTextField(config as any ?? {}, multiLineTextFieldValidations);
 }
 
 export const multiLineTextFieldValidations = {
@@ -140,7 +134,7 @@ export const multiLineTextFieldValidations = {
 export type MultiLineTextFieldValidations = typeof multiLineTextFieldValidations;
 
 export class DecimalField extends Field<number> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DecimalFieldValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DecimalFieldValidations>, validations: Validations) {
 		super({ ...config, type: 'number_decimal' }, validations);
 	}
 
@@ -157,8 +151,10 @@ export class DecimalField extends Field<number> {
 	}
 }
 
-export function decimal<T extends MetaobjectFieldDefinitionConfig<DecimalFieldValidations>>(config?: T): DecimalField {
-	return new DecimalField(config ?? {}, decimalFieldValidations);
+export function decimal<T extends MetafieldFieldDefinitionConfig<DecimalFieldValidations>>(
+	config?: T
+): DecimalField {
+	return new DecimalField(config as any ?? {}, decimalFieldValidations);
 }
 
 export const decimalFieldValidations = {
@@ -174,7 +170,7 @@ export const decimalFieldValidations = {
 export type DecimalFieldValidations = typeof decimalFieldValidations;
 
 export class DecimalListField extends Field<number[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DecimalListFieldValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DecimalListFieldValidations>, validations: Validations) {
 		super({ ...config, type: 'list.number_decimal' }, validations);
 	}
 
@@ -187,10 +183,10 @@ export class DecimalListField extends Field<number[]> {
 	}
 }
 
-export function decimalList<T extends MetaobjectFieldDefinitionConfig<DecimalListFieldValidations>>(
+export function decimalList<T extends MetafieldFieldDefinitionConfig<DecimalListFieldValidations>>(
 	config?: T,
 ): DecimalListField {
-	return new DecimalListField(config ?? {}, decimalListFieldValidations);
+	return new DecimalListField(config as any ?? {}, decimalListFieldValidations);
 }
 
 export const decimalListFieldValidations = decimalFieldValidations;
@@ -198,13 +194,15 @@ export const decimalListFieldValidations = decimalFieldValidations;
 export type DecimalListFieldValidations = typeof decimalListFieldValidations;
 
 export class UrlField extends Field<string> {
-	constructor(config: MetaobjectFieldDefinitionConfig<UrlValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<UrlValidations>, validations: Validations) {
 		super({ ...config, type: 'url' }, validations);
 	}
 }
 
-export function url<T extends MetaobjectFieldDefinitionConfig<UrlValidations>>(config?: T): UrlField {
-	return new UrlField(config ?? {}, urlValidations);
+export function url<T extends MetafieldFieldDefinitionConfig<UrlValidations>>(
+	config?: T
+): UrlField {
+	return new UrlField(config as any ?? {}, urlValidations);
 }
 
 export const urlValidations = {
@@ -214,13 +212,13 @@ export const urlValidations = {
 export type UrlValidations = typeof urlValidations;
 
 export class UrlListField extends Field<string[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<UrlListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<UrlListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.url' }, validations);
 	}
 }
 
-export function urlList<T extends MetaobjectFieldDefinitionConfig<UrlListValidations>>(config?: T): UrlListField {
-	return new UrlListField(config ?? {}, urlListValidations);
+export function urlList<T extends MetafieldFieldDefinitionConfig<UrlListValidations>>(config?: T): UrlListField {
+	return new UrlListField(config as any ?? {}, urlListValidations);
 }
 
 export const urlListValidations = urlValidations;
@@ -228,7 +226,7 @@ export const urlListValidations = urlValidations;
 export type UrlListValidations = typeof urlListValidations;
 
 export class IntegerField extends Field<number> {
-	constructor(config: MetaobjectFieldDefinitionConfig<IntegerValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<IntegerValidations>, validations: Validations) {
 		super({ ...config, type: 'number_integer' }, validations);
 	}
 
@@ -241,8 +239,10 @@ export class IntegerField extends Field<number> {
 	}
 }
 
-export function integer<T extends MetaobjectFieldDefinitionConfig<IntegerValidations>>(config?: T): IntegerField {
-	return new IntegerField(config ?? {}, integerValidations);
+export function integer<T extends MetafieldFieldDefinitionConfig<IntegerValidations>>(
+	config?: T
+): IntegerField {
+	return new IntegerField(config as any ?? {}, integerValidations);
 }
 
 export const integerValidations = {
@@ -257,7 +257,7 @@ export const integerValidations = {
 export type IntegerValidations = typeof integerValidations;
 
 export class IntegerListField extends Field<number[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<IntegerListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<IntegerListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.number_integer' }, validations);
 	}
 
@@ -270,10 +270,10 @@ export class IntegerListField extends Field<number[]> {
 	}
 }
 
-export function integerList<T extends MetaobjectFieldDefinitionConfig<IntegerListValidations>>(
+export function integerList<T extends MetafieldFieldDefinitionConfig<IntegerListValidations>>(
 	config?: T,
 ): IntegerListField {
-	return new IntegerListField(config ?? {}, integerListValidations);
+	return new IntegerListField(config as any ?? {}, integerListValidations);
 }
 
 export const integerListValidations = integerValidations;
@@ -281,7 +281,7 @@ export const integerListValidations = integerValidations;
 export type IntegerListValidations = typeof integerListValidations;
 
 export class DateField extends Field<Date> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DateValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DateValidations>, validations: Validations) {
 		super({ ...config, type: 'date' }, validations);
 	}
 
@@ -294,8 +294,10 @@ export class DateField extends Field<Date> {
 	}
 }
 
-export function date<T extends MetaobjectFieldDefinitionConfig<DateValidations>>(config?: T): DateField {
-	return new DateField(config ?? {}, dateValidations);
+export function date<T extends MetafieldFieldDefinitionConfig<DateValidations>>(
+	config?: T
+): DateField {
+	return new DateField(config as any ?? {}, dateValidations);
 }
 
 export const dateValidations = {
@@ -310,7 +312,7 @@ export const dateValidations = {
 export type DateValidations = typeof dateValidations;
 
 export class DateListField extends Field<Date[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DateListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DateListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.date' }, validations);
 	}
 
@@ -323,8 +325,10 @@ export class DateListField extends Field<Date[]> {
 	}
 }
 
-export function dateList<T extends MetaobjectFieldDefinitionConfig<DateListValidations>>(config?: T): DateListField {
-	return new DateListField(config ?? {}, dateListValidations);
+export function dateList<T extends MetafieldFieldDefinitionConfig<DateListValidations>>(
+	config?: T
+): DateListField {
+	return new DateListField(config as any ?? {}, dateListValidations);
 }
 
 export const dateListValidations = dateValidations;
@@ -332,7 +336,7 @@ export const dateListValidations = dateValidations;
 export type DateListValidations = typeof dateListValidations;
 
 export class DateTimeField extends Field<Date> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DateTimeValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DateTimeValidations>, validations: Validations) {
 		super({ ...config, type: 'date_time' }, validations);
 	}
 
@@ -345,8 +349,10 @@ export class DateTimeField extends Field<Date> {
 	}
 }
 
-export function dateTime<T extends MetaobjectFieldDefinitionConfig<DateTimeValidations>>(config?: T): DateTimeField {
-	return new DateTimeField(config ?? {}, dateTimeValidations);
+export function dateTime<T extends MetafieldFieldDefinitionConfig<DateTimeValidations>>(
+	config?: T
+): DateTimeField {
+	return new DateTimeField(config as any ?? {}, dateTimeValidations);
 }
 
 export const dateTimeValidations = {
@@ -361,7 +367,7 @@ export const dateTimeValidations = {
 export type DateTimeValidations = typeof dateTimeValidations;
 
 export class DateTimeListField extends Field<Date[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DateTimeListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DateTimeListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.date_time' }, validations);
 	}
 
@@ -374,89 +380,15 @@ export class DateTimeListField extends Field<Date[]> {
 	}
 }
 
-export function dateTimeList<T extends MetaobjectFieldDefinitionConfig<DateTimeListValidations>>(
+export function dateTimeList<T extends MetafieldFieldDefinitionConfig<DateTimeListValidations>>(
 	config?: T,
 ): DateTimeListField {
-	return new DateTimeListField(config ?? {}, dateTimeListValidations);
+	return new DateTimeListField(config as any ?? {}, dateTimeListValidations);
 }
 
 export const dateTimeListValidations = dateTimeValidations;
 
 export type DateTimeListValidations = typeof dateTimeListValidations;
-
-export class ProductField<T> extends Field<T> {
-	constructor(config: MetaobjectFieldDefinitionConfig, validations: Validations) {
-		super({ ...config, type: 'product_reference' }, validations);
-	}
-
-	static override toAPIValue(value: any): string {
-		return JSON.stringify(value);
-	}
-
-	static override fromAPIValue(value: string): any {
-		return JSON.parse(value);
-	}
-}
-
-export function product<T extends MetaobjectFieldDefinitionConfig>(config?: T): ProductField<T> {
-	return new ProductField(config ?? {}, {});
-}
-
-export const productValidations = {};
-
-export type ProductValidations = typeof productValidations;
-
-export class ProductListField<T> extends Field<T[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig, validations: Validations) {
-		super({ ...config, type: 'list.product_reference' }, validations);
-	}
-
-	static override toAPIValue(value: any): string {
-		return JSON.stringify(value);
-	}
-
-	static override fromAPIValue(value: string): any {
-		return JSON.parse(value);
-	}
-}
-
-export function productList<T extends MetaobjectFieldDefinitionConfig>(config?: T): ProductListField<T> {
-	return new ProductListField(config ?? {}, {});
-}
-
-export const productListValidations = productValidations;
-
-export type ProductListValidations = typeof productListValidations;
-
-export class FileField extends Field<Blob> {
-	constructor(config: MetaobjectFieldDefinitionConfig<FileValidations>, validations: Validations) {
-		super({ ...config, type: 'file_reference' }, validations);
-	}
-}
-
-export function file<T extends MetaobjectFieldDefinitionConfig<FileValidations>>(config?: T): FileField {
-	return new FileField(config ?? {}, fileValidations);
-}
-
-export const fileValidations = {
-	fileTypes,
-};
-
-export type FileValidations = typeof fileValidations;
-
-export class FileListField extends Field<Blob[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<FileListValidations>, validations: Validations) {
-		super({ ...config, type: 'list.file_reference' }, validations);
-	}
-}
-
-export function fileList<T extends MetaobjectFieldDefinitionConfig<FileListValidations>>(config?: T): FileListField {
-	return new FileListField(config ?? {}, fileListValidations);
-}
-
-export const fileListValidations = fileValidations;
-
-export type FileListValidations = typeof fileListValidations;
 
 export type DimensionUnit = 'METERS' | 'CENTIMETERS' | 'MILLIMETERS' | 'INCHES' | 'FEET' | 'YARDS';
 
@@ -466,7 +398,7 @@ export interface DimensionFieldValue {
 }
 
 export class DimensionField extends Field<DimensionFieldValue> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DimensionValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DimensionValidations>, validations: Validations) {
 		super({ ...config, type: 'dimension' }, validations);
 	}
 
@@ -479,8 +411,10 @@ export class DimensionField extends Field<DimensionFieldValue> {
 	}
 }
 
-export function dimension<T extends MetaobjectFieldDefinitionConfig<DimensionValidations>>(config?: T): DimensionField {
-	return new DimensionField(config ?? {}, dimensionValidations);
+export function dimension<T extends MetafieldFieldDefinitionConfig<DimensionValidations>>(
+	config?: T
+): DimensionField {
+	return new DimensionField(config as any ?? {}, dimensionValidations);
 }
 
 export const dimensionValidations = {
@@ -496,7 +430,7 @@ export const dimensionValidations = {
 export type DimensionValidations = typeof dimensionValidations;
 
 export class DimensionListField extends Field<DimensionFieldValue[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DimensionListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<DimensionListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.dimension' }, validations);
 	}
 
@@ -509,10 +443,10 @@ export class DimensionListField extends Field<DimensionFieldValue[]> {
 	}
 }
 
-export function dimensionList<T extends MetaobjectFieldDefinitionConfig<DimensionListValidations>>(
+export function dimensionList<T extends MetafieldFieldDefinitionConfig<DimensionListValidations>>(
 	config?: T,
 ): DimensionListField {
-	return new DimensionListField(config ?? {}, dimensionListValidations);
+	return new DimensionListField(config as any ?? {}, dimensionListValidations);
 }
 
 export const dimensionListValidations = dimensionValidations;
@@ -535,7 +469,7 @@ export interface VolumeFieldValue {
 }
 
 export class VolumeField extends Field<VolumeFieldValue> {
-	constructor(config: MetaobjectFieldDefinitionConfig<VolumeValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<VolumeValidations>, validations: Validations) {
 		super({ ...config, type: 'volume' }, validations);
 	}
 
@@ -548,8 +482,10 @@ export class VolumeField extends Field<VolumeFieldValue> {
 	}
 }
 
-export function volume<T extends MetaobjectFieldDefinitionConfig<VolumeValidations>>(config?: T): VolumeField {
-	return new VolumeField(config ?? {}, volumeValidations);
+export function volume<T extends MetafieldFieldDefinitionConfig<VolumeValidations>>(
+	config?: T
+): VolumeField {
+	return new VolumeField(config as any ?? {}, volumeValidations);
 }
 
 export const volumeValidations = {
@@ -565,7 +501,7 @@ export const volumeValidations = {
 export type VolumeValidations = typeof volumeValidations;
 
 export class VolumeListField extends Field<VolumeFieldValue[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<VolumeListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<VolumeListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.volume' }, validations);
 	}
 
@@ -578,10 +514,10 @@ export class VolumeListField extends Field<VolumeFieldValue[]> {
 	}
 }
 
-export function volumeList<T extends MetaobjectFieldDefinitionConfig<VolumeListValidations>>(
+export function volumeList<T extends MetafieldFieldDefinitionConfig<VolumeListValidations>>(
 	config?: T,
 ): VolumeListField {
-	return new VolumeListField(config ?? {}, volumeListValidations);
+	return new VolumeListField(config as any ?? {}, volumeListValidations);
 }
 
 export const volumeListValidations = volumeValidations;
@@ -596,7 +532,7 @@ export interface WeightFieldValue {
 }
 
 export class WeightField extends Field<WeightFieldValue> {
-	constructor(config: MetaobjectFieldDefinitionConfig<WeightValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<WeightValidations>, validations: Validations) {
 		super({ ...config, type: 'weight' }, validations);
 	}
 
@@ -609,8 +545,10 @@ export class WeightField extends Field<WeightFieldValue> {
 	}
 }
 
-export function weight<T extends MetaobjectFieldDefinitionConfig<WeightValidations>>(config?: T): WeightField {
-	return new WeightField(config ?? {}, weightValidations);
+export function weight<T extends MetafieldFieldDefinitionConfig<WeightValidations>>(
+	config?: T
+): WeightField {
+	return new WeightField(config as any ?? {}, weightValidations);
 }
 
 export const weightValidations = {
@@ -626,7 +564,7 @@ export const weightValidations = {
 export type WeightValidations = typeof weightValidations;
 
 export class WeightListField extends Field<WeightFieldValue[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<WeightListValidations>, validations: Validations) {
+	constructor(config: MetafieldFieldDefinitionConfig<WeightListValidations>, validations: Validations) {
 		super({ ...config, type: 'list.weight' }, validations);
 	}
 
@@ -639,12 +577,106 @@ export class WeightListField extends Field<WeightFieldValue[]> {
 	}
 }
 
-export function weightList<T extends MetaobjectFieldDefinitionConfig<WeightListValidations>>(
+export function weightList<T extends MetafieldFieldDefinitionConfig<WeightListValidations>>(
 	config?: T,
 ): WeightListField {
-	return new WeightListField(config ?? {}, weightListValidations);
+	return new WeightListField(config as any ?? {}, weightListValidations);
 }
 
 export const weightListValidations = weightValidations;
 
 export type WeightListValidations = typeof weightListValidations;
+
+export class MetaobjectReferenceField extends Field<string> {
+	constructor(config: MetafieldFieldDefinitionConfig, validations: Validations) {
+		super({ ...config, type: 'metaobject_reference' }, validations);
+	}
+}
+
+// references
+
+export function metaobjectReference<T extends MetafieldFieldDefinitionConfig<MetaobjectReferenceValidations>>(config?: T): MetaobjectReferenceField {
+	return new MetaobjectReferenceField(config as any ?? {}, metaobjectReferenceValidations);
+}
+
+export const metaobjectReferenceValidations = {
+	metaobjectDefinitionType(value: () => string) {
+		return metaobjectDefinition(value());
+	}
+};
+
+export type MetaobjectReferenceValidations = typeof metaobjectReferenceValidations;
+
+export class ProductField<T> extends Field<T> {
+	constructor(config: MetafieldFieldDefinitionConfig, validations: Validations) {
+		super({ ...config, type: 'product_reference' }, validations);
+	}
+
+	static override toAPIValue(value: any): string {
+		return JSON.stringify(value);
+	}
+
+	static override fromAPIValue(value: string): any {
+		return JSON.parse(value);
+	}
+}
+
+export function product<T extends MetafieldFieldDefinitionConfig>(config?: T): ProductField<T> {
+	return new ProductField(config as any ?? {}, {});
+}
+
+export const productValidations = {};
+
+export type ProductValidations = typeof productValidations;
+
+export class ProductListField<T> extends Field<T[]> {
+	constructor(config: MetafieldFieldDefinitionConfig, validations: Validations) {
+		super({ ...config, type: 'list.product_reference' }, validations);
+	}
+
+	static override toAPIValue(value: any): string {
+		return JSON.stringify(value);
+	}
+
+	static override fromAPIValue(value: string): any {
+		return JSON.parse(value);
+	}
+}
+
+export function productList<T extends MetafieldFieldDefinitionConfig>(config?: T): ProductListField<T> {
+	return new ProductListField(config as any ?? {}, {});
+}
+
+export const productListValidations = productValidations;
+
+export type ProductListValidations = typeof productListValidations;
+
+export class FileField extends Field<Blob> {
+	constructor(config: MetafieldFieldDefinitionConfig<FileValidations>, validations: Validations) {
+		super({ ...config, type: 'file_reference' }, validations);
+	}
+}
+
+export function file<T extends MetafieldFieldDefinitionConfig<FileValidations>>(config?: T): FileField {
+	return new FileField(config as any ?? {}, fileValidations);
+}
+
+export const fileValidations = {
+	fileTypes,
+};
+
+export type FileValidations = typeof fileValidations;
+
+export class FileListField extends Field<Blob[]> {
+	constructor(config: MetafieldFieldDefinitionConfig<FileListValidations>, validations: Validations) {
+		super({ ...config, type: 'list.file_reference' }, validations);
+	}
+}
+
+export function fileList<T extends MetafieldFieldDefinitionConfig<FileListValidations>>(config?: T): FileListField {
+	return new FileListField(config as any ?? {}, fileListValidations);
+}
+
+export const fileListValidations = fileValidations;
+
+export type FileListValidations = typeof fileListValidations;
