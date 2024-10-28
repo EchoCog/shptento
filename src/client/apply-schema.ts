@@ -1,4 +1,12 @@
-import { MetafieldIntrospection, MetaobjectIntrospection, diffMetafieldSchemas, diffSchemas, introspectMetafieldRemoteSchema, introspectMetaobjectRemoteSchema, setMetaobjectIdFor } from './diff';
+import {
+	MetafieldIntrospection,
+	MetaobjectIntrospection,
+	diffMetafieldSchemas,
+	diffSchemas,
+	introspectMetafieldRemoteSchema,
+	introspectMetaobjectRemoteSchema,
+	setMetaobjectIdFor,
+} from './diff';
 import { Client } from './gql-client';
 import { graphql } from '../graphql/gen';
 import { Metaobject } from './metaobject/metaobject';
@@ -9,16 +17,16 @@ export async function applySchema({
 	remoteMetaobjectSchema,
 	remoteMetafieldSchema,
 	client,
-	prefix,
+	unknownEntities,
 }: {
 	localSchema: Record<string, any>;
 	remoteMetaobjectSchema?: MetaobjectIntrospection;
 	remoteMetafieldSchema?: MetafieldIntrospection;
 	client: Client;
-	prefix: string,
+	unknownEntities: 'delete' | 'ignore';
 }) {
-	remoteMetaobjectSchema ??= await introspectMetaobjectRemoteSchema({ client, prefix, });
-	remoteMetafieldSchema ??= await introspectMetafieldRemoteSchema({ client, prefix, });
+	remoteMetaobjectSchema ??= await introspectMetaobjectRemoteSchema(client);
+	remoteMetafieldSchema ??= await introspectMetafieldRemoteSchema(client);
 
 	const localMetaobjectSchema = Object.fromEntries(
 		Object.entries(rawLocalSchema)
@@ -31,6 +39,29 @@ export async function applySchema({
 			.map(([key, value]) => [key, value._.config]),
 	);
 
+	/**
+	 * When config option is 'ignore' we need to work only with local metaobjects, metafields.
+	 * It also ensures that only local specified metaobjects and metafields are retained, preventing the deletion of other existing items.
+	 */
+	if (unknownEntities === 'ignore') {
+		const localMetaobjectTypes = Object.values(localMetaobjectSchema).map((localMetaobject) => localMetaobject.type);
+		const localMetafieldTypes = Object.values(localMetafieldSchema).map(
+			(localMetaobject) =>
+				`${localMetaobject.namespace ? `${localMetaobject.namespace}` : 'custom'}.${localMetaobject.key}`,
+		);
+
+		remoteMetaobjectSchema = remoteMetaobjectSchema
+			.filter((metaobject) => {
+				return localMetaobjectTypes.includes(metaobject.type);
+			})
+			.filter(Boolean);
+		remoteMetafieldSchema = remoteMetafieldSchema
+			.filter((metafield) => {
+				return localMetafieldTypes.includes(`${metafield.namespace}.${metafield.key}`);
+			})
+			.filter(Boolean);
+	}
+
 	console.log(Object.entries(rawLocalSchema));
 	console.log(JSON.stringify({ localSchema: localMetaobjectSchema }, null, 2));
 	console.log(JSON.stringify({ remoteMetaobjectSchema }, null, 2));
@@ -39,19 +70,22 @@ export async function applySchema({
 	const diffMetaobjects = diffSchemas({
 		local: localMetaobjectSchema,
 		remote: remoteMetaobjectSchema,
-		prefix,
 	});
 	const diffMetafields = diffMetafieldSchemas({
 		local: localMetafieldSchema,
 		remote: remoteMetafieldSchema,
-		prefix
 	});
 
 	console.log(JSON.stringify(diffMetaobjects, null, 2));
 	console.log(JSON.stringify(diffMetafields, null, 2));
 
-	if ((!diffMetaobjects.create.length && !diffMetaobjects.update.length && !diffMetaobjects.delete.length)
-		&& (!diffMetafields.create.length && !diffMetafields.update.length && !diffMetafields.delete.length)) {
+	if (
+		!diffMetaobjects.create.length &&
+		!diffMetaobjects.update.length &&
+		!diffMetaobjects.delete.length &&
+		!diffMetafields.create.length && !diffMetafields.update.length &&
+		!diffMetafields.delete.length
+	) {
 		return;
 	}
 
@@ -93,9 +127,9 @@ export async function applySchema({
 
 	// Metafield
 	for (const create of diffMetafields.create) {
-		const referenceValidations = create.definition.validations?.filter(v => v.name === 'metaobject_definition_id');
+		const referenceValidations = create.definition.validations?.filter((v) => v.name === 'metaobject_definition_id');
 		if (typeof referenceValidations !== 'undefined') {
-			await setMetaobjectIdFor({ client, validations: referenceValidations, prefix });
+			await setMetaobjectIdFor({ client, validations: referenceValidations });
 		}
 
 		const result = await client(createMetafieldQuery, { definition: create.definition });
@@ -110,9 +144,9 @@ export async function applySchema({
 	}
 
 	for (const update of diffMetafields.update) {
-		const referenceValidations = update.definition.validations?.filter(v => v.name === 'metaobject_definition_id');
+		const referenceValidations = update.definition.validations?.filter((v) => v.name === 'metaobject_definition_id');
 		if (typeof referenceValidations !== 'undefined') {
-			await setMetaobjectIdFor({ client, validations: referenceValidations, prefix });
+			await setMetaobjectIdFor({ client, validations: referenceValidations });
 		}
 
 		const { definition } = update;
@@ -124,7 +158,8 @@ export async function applySchema({
 				name: definition.name ?? undefined,
 				namespace: definition.namespace ?? undefined,
 				pin: typeof definition.pin !== 'undefined' ? definition.pin : undefined,
-				useAsCollectionCondition: typeof definition.useAsCollectionCondition !== 'undefined' ? definition.useAsCollectionCondition : undefined,
+				useAsCollectionCondition:
+					typeof definition.useAsCollectionCondition !== 'undefined' ? definition.useAsCollectionCondition : undefined,
 				validations: definition.validations ?? undefined,
 			},
 		});

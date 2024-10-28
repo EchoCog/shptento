@@ -15,7 +15,7 @@ import type {
 	MetaobjectUpdateInput,
 	MetaobjectUserError,
 } from '../../graphql/gen/graphql';
-import { type Client } from '../gql-client';
+import type { Client } from '../gql-client';
 import { KnownKeysOnly, ListConfigQueryItem } from '../types';
 
 const metaFields: Record<string, Field<any>> = {
@@ -30,17 +30,14 @@ const metaFieldNames = Object.keys(metaFields);
 export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 	readonly _: {
 		readonly metaobject: T;
-		readonly prefix: string,
-		readonly type: string;
 	};
 
 	declare readonly $inferSelect: T['$inferSelect'];
 	declare readonly $inferInsert: T['$inferInsert'];
 	declare readonly $inferUpdate: T['$inferUpdate'];
 
-	constructor(metaobject: T, private client: Client, prefix: string) {
-		const type = `${prefix}_${metaobject.type}`;
-		this._ = { metaobject, prefix, type };
+	constructor(metaobject: T, private client: Client) {
+		this._ = { metaobject };
 	}
 
 	private getSelectedFields(fields: ListConfigFields<T> | undefined): Record<string, true> {
@@ -131,9 +128,10 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		 * TODO() Think about it
 		 * Set default value 50 to first if first or last not provided
 		 */
-		const first: TConfig["first"] | undefined = typeof config?.first !== 'number' && typeof config?.last !== 'number' ? 50 : config.first;
+		const first: TConfig['first'] | undefined =
+			typeof config?.first !== 'number' && typeof config?.last !== 'number' ? 50 : config.first;
 		const response = await this.client(query, {
-			type: this._.type,
+			type: this._.metaobject._.config.type,
 			query: buildListQuery(config?.query),
 			after: config?.after,
 			before: config?.before,
@@ -186,7 +184,9 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			return undefined;
 		}
 
-		return this.mapItemResult(response.data?.metaobject, allSelectedFieldsMap, selectedFields) as unknown as ResultItem<T, TFields> | undefined;
+		return this.mapItemResult(response.data?.metaobject, allSelectedFieldsMap, selectedFields) as unknown as
+			| ResultItem<T, TFields>
+			| undefined;
 	}
 
 	async *iterator<TConfig extends IteratorConfig<T>>(
@@ -204,8 +204,8 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		while (hasNextPage) {
 			const query = `
 					query ListMetaobjects($type: String!, $query: String, $after: String, $first: Int, $reverse: Boolean, $sortKey: String, ${selectedFields
-					.map((_, i) => `$field${i}: String!`)
-					.join(', ')}) {
+						.map((_, i) => `$field${i}: String!`)
+						.join(', ')}) {
 						metaobjects(type: $type, query: $query, after: $after, first: $first, reverse: $reverse, sortKey: $sortKey) {
 							edges {
 								node {
@@ -219,7 +219,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 					}`;
 
 			const response = await this.client(query, {
-				type: this._.type,
+				type: this._.metaobject._.config.type,
 				query: buildListQuery(config.query),
 				after: cursor,
 				first: pageSize,
@@ -306,7 +306,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			);
 		}
 
-		return this.mapItemResult(response.data?.metaobjectUpdate.metaobject, allSelectedFieldsMap, selectedFields) as T["$inferSelect"];
+		return this.mapItemResult(
+			response.data?.metaobjectUpdate.metaobject,
+			allSelectedFieldsMap,
+			selectedFields,
+		) as T['$inferSelect'];
 	}
 
 	async insert(item: T['$inferInsert']): Promise<ResultItem<T, undefined>> {
@@ -328,7 +332,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 
 		const result = await this.client(query, {
 			metaobject: {
-				type: this._.type,
+				type: this._.metaobject._.config.type,
 				fields: Object.entries(item).map(([key, value]) => {
 					const field = this._.metaobject.fields[key];
 					if (!field) {
@@ -340,7 +344,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 						value: field.toAPIValue(value),
 					};
 				}),
-			}
+			},
 		});
 
 		if (result.errors) {
@@ -355,7 +359,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			);
 		}
 
-		return this.mapItemResult(result.data.metaobjectCreate.metaobject, allSelectedFieldsMap, selectedFields) as T["$inferSelect"];
+		return this.mapItemResult(
+			result.data.metaobjectCreate.metaobject,
+			allSelectedFieldsMap,
+			selectedFields,
+		) as T['$inferSelect'];
 	}
 
 	async upsert(handle: string, updates: UpdateConfig<T>): Promise<ResultItem<T, undefined>> {
@@ -407,7 +415,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 
 		const response = await this.client(query, {
 			handle: {
-				type: this._.type,
+				type: this._.metaobject._.config.type,
 				handle,
 			},
 			metaobject: metaobjectUpdateInput,
@@ -425,7 +433,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			);
 		}
 
-		return this.mapItemResult(response.data?.metaobjectUpsert.metaobject, allSelectedFieldsMap, selectedFields) as T["$inferSelect"];
+		return this.mapItemResult(
+			response.data?.metaobjectUpsert.metaobject,
+			allSelectedFieldsMap,
+			selectedFields,
+		) as T['$inferSelect'];
 	}
 
 	async delete(id: string) {
@@ -453,7 +465,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		}
 	}
 
-	async bulkDelete(ids?: string[]): Promise<{ id: string, done: boolean }> {
+	async bulkDelete(ids?: string[]): Promise<{ id: string; done: boolean }> {
 		const query = `
 			mutation DeleteMetaobjects($ids: [ID!], $type: String) {
 				metaobjectBulkDelete(where: { ids: $ids, type: $type }) {
@@ -469,7 +481,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 
 		const result = await this.client(query, {
 			ids,
-			type: ids && ids.length ? undefined : this._.type,
+			type: ids?.length ? undefined : this._.metaobject._.config.type,
 		});
 
 		if (result.errors) {
@@ -487,7 +499,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		return {
 			id: String(result.data.metaobjectBulkDelete.job.id),
 			done: Boolean(result.data.metaobjectBulkDelete.job.done),
-		}
+		};
 	}
 }
 

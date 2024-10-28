@@ -24,7 +24,15 @@ import type {
 } from '../graphql/gen/graphql';
 import { readLocalSchema, type Config } from './index';
 import { createClient } from '../client/gql-client';
-import { MetafieldIntrospection, MetaobjectIntrospection, diffMetafieldSchemas, diffSchemas, setMetaobjectIdFor, introspectMetafieldRemoteSchema, introspectMetaobjectRemoteSchema } from '../client/diff';
+import {
+	MetafieldIntrospection,
+	MetaobjectIntrospection,
+	diffMetafieldSchemas,
+	diffSchemas,
+	setMetaobjectIdFor,
+	introspectMetafieldRemoteSchema,
+	introspectMetaobjectRemoteSchema,
+} from '../client/diff';
 
 const argsSchema = object({
 	'--config': optional(string(), 'tento.config.ts'),
@@ -49,7 +57,9 @@ async function main() {
 		console.log('Usage: tento <command> [options]\n');
 		console.log('Commands:');
 		console.log('  pull\t synchronize the metaobject and the metafield definitions from Shopify to the local schema');
-		console.log('  push [--dry-run]\t synchronize the metaobject and the metafield definitions from the local schema to Shopify');
+		console.log(
+			'  push [--dry-run]\t synchronize the metaobject and the metafield definitions from the local schema to Shopify',
+		);
 		console.log('\nOptions:');
 		console.log('  --config <path>\t path to the config file (default: tento.config.ts)');
 		console.log('  --debug');
@@ -95,35 +105,33 @@ async function readConfig(args: Args): Promise<Config> {
 
 async function push(args: Args) {
 	const config = await readConfig(args);
-	const prefix = config.prefix ?? 'tento';
-
 	const client = createClient({ shop: config.shop, headers: config.headers });
 	const schemaPath = path.resolve(path.dirname(args['--config']), config.schemaPath);
 
 	const [schemas, metaobjectIntrospection, metafieldIntrospection] = await Promise.all([
 		readLocalSchema(schemaPath),
-		introspectMetaobjectRemoteSchema({ client, prefix }),
-		introspectMetafieldRemoteSchema({ client, prefix }),
+		introspectMetaobjectRemoteSchema(client),
+		introspectMetafieldRemoteSchema(client),
 	]);
 
-	const {
-		metaobjectSchema,
-		metafieldSchema,
-	} = schemas;
+	const { metaobjectSchema, metafieldSchema } = schemas;
 
 	const diffMetaobject = diffSchemas({
 		local: metaobjectSchema,
 		remote: metaobjectIntrospection,
-		prefix,
 	});
 	const diffMetafield = diffMetafieldSchemas({
 		local: metafieldSchema,
 		remote: metafieldIntrospection,
-		prefix,
 	});
 
-	if ((!diffMetaobject.create.length && !diffMetaobject.update.length && !diffMetaobject.delete.length)
-		&& (!diffMetafield.create.length && !diffMetafield.update.length && !diffMetafield.delete.length)) {
+	if (
+		!diffMetaobject.create.length &&
+		!diffMetaobject.update.length &&
+		!diffMetaobject.delete.length &&
+		!diffMetafield.create.length && !diffMetafield.update.length &&
+		!diffMetafield.delete.length
+	) {
 		console.log(chalk.gray('😴 Schema is already up to date, no changes required'));
 		return;
 	}
@@ -169,7 +177,7 @@ async function push(args: Args) {
 	}
 
 	/**
-	 * TODO() maybe need to recheck key + namespace if something match is could be just update 
+	 * TODO() maybe need to recheck key + namespace if something match is could be just update
 	 * 	and no need to ask for deletion ???
 	 */
 	if (diffMetafield.delete.length > 0) {
@@ -310,15 +318,12 @@ async function push(args: Args) {
 	`;
 
 	for (const create of diffMetafield.create) {
-		const referenceValidations = create.definition.validations?.filter(v => v.name === 'metaobject_definition_id');
+		const referenceValidations = create.definition.validations?.filter((v) => v.name === 'metaobject_definition_id');
 		if (typeof referenceValidations !== 'undefined') {
-			await setMetaobjectIdFor({ client, validations: referenceValidations, prefix });
+			await setMetaobjectIdFor({ client, validations: referenceValidations });
 		}
 
-		const result = await client(
-			createMetafieldQuery,
-			{ definition: create.definition },
-		);
+		const result = await client(createMetafieldQuery, { definition: create.definition });
 		if (result.errors?.graphQLErrors?.length) {
 			console.error(result.errors.graphQLErrors);
 			process.exit(1);
@@ -327,13 +332,10 @@ async function push(args: Args) {
 			console.error(result.data.metafieldDefinitionCreate.userErrors);
 			process.exit(1);
 		}
-		const metafieldName =
-			`${result.data!.metafieldDefinitionCreate!.createdDefinition!.namespace}.${result.data!.metafieldDefinitionCreate!.createdDefinition!.key}`
-		console.log(
-			chalk.gray(
-				`- Created metafield definition "${metafieldName}"`,
-			),
-		);
+		const metafieldName = `${result.data!.metafieldDefinitionCreate!.createdDefinition!.namespace}.${
+			result.data!.metafieldDefinitionCreate!.createdDefinition!.key
+		}`;
+		console.log(chalk.gray(`- Created metafield definition "${metafieldName}"`));
 	}
 
 	const updateMetafieldQuery = /* GraphQL */ `
@@ -354,9 +356,9 @@ async function push(args: Args) {
 	for (const update of diffMetafield.update) {
 		const { definition } = update;
 
-		const referenceValidations = definition.validations?.filter(v => v.name === 'metaobject_definition_id');
+		const referenceValidations = definition.validations?.filter((v) => v.name === 'metaobject_definition_id');
 		if (typeof referenceValidations !== 'undefined') {
-			await setMetaobjectIdFor({ client, validations: referenceValidations, prefix });
+			await setMetaobjectIdFor({ client, validations: referenceValidations });
 		}
 
 		const result = await client(updateMetafieldQuery, {
@@ -367,7 +369,8 @@ async function push(args: Args) {
 				name: definition.name ?? undefined,
 				namespace: definition.namespace ?? undefined,
 				pin: typeof definition.pin !== 'undefined' ? definition.pin : undefined,
-				useAsCollectionCondition: typeof definition.useAsCollectionCondition !== 'undefined' ? definition.useAsCollectionCondition : undefined,
+				useAsCollectionCondition:
+					typeof definition.useAsCollectionCondition !== 'undefined' ? definition.useAsCollectionCondition : undefined,
 				validations: definition.validations ?? undefined,
 			},
 		});
@@ -379,7 +382,9 @@ async function push(args: Args) {
 			console.error(result.data.metafieldDefinitionUpdate.userErrors);
 			process.exit(1);
 		}
-		let name = `"${result.data!.metafieldDefinitionUpdate!.updatedDefinition!.namespace}.${result.data!.metafieldDefinitionUpdate!.updatedDefinition!.key}"`;
+		let name = `"${result.data!.metafieldDefinitionUpdate!.updatedDefinition!.namespace}.${
+			result.data!.metafieldDefinitionUpdate!.updatedDefinition!.key
+		}"`;
 
 		const metafield = metafieldIntrospection.find((d) => d.id === update.id)!;
 		const metafieldName = `"${metafield.namespace}.${metafield.key}"`;
@@ -399,10 +404,7 @@ async function push(args: Args) {
 		}`;
 
 	for (const id of diffMetafield.delete) {
-		const result = await client(
-			deleteMetafieldQuery,
-			{ id },
-		);
+		const result = await client(deleteMetafieldQuery, { id });
 		if (result.errors?.graphQLErrors?.length) {
 			console.error(result.errors.graphQLErrors);
 			process.exit(1);
@@ -420,8 +422,6 @@ async function push(args: Args) {
 
 async function pull(args: Args) {
 	const config = await readConfig(args);
-	const prefix = config.prefix ?? 'tento';
-
 	const schemaPath = path.resolve(path.dirname(args['--config']), config.schemaPath);
 	const schemaStat = await fs.stat(schemaPath).catch(() => undefined);
 	if (schemaStat) {
@@ -447,8 +447,8 @@ async function pull(args: Args) {
 
 	const client = createClient({ shop: config.shop, headers: config.headers });
 
-	const metaobjectIntrospection = await introspectMetaobjectRemoteSchema({ client, prefix });
-	const metafieldsIntrospection = await introspectMetafieldRemoteSchema({ client, prefix });
+	const metaobjectIntrospection = await introspectMetaobjectRemoteSchema(client);
+	const metafieldsIntrospection = await introspectMetafieldRemoteSchema(client);
 	if (!metaobjectIntrospection.length && !metafieldsIntrospection.length) {
 		console.log(chalk.yellow.bold('No metaobject | metafield definitions detected'));
 		console.log(chalk.gray('Hint: you can use "sp push" to push the local schema to Shopify'));
@@ -456,7 +456,9 @@ async function pull(args: Args) {
 	}
 
 	// metaobject + metafield codegen ready
-	const codegen: (string | undefined)[] = [`import { metaobject${metafieldsIntrospection.length ? ", metafield" : ""} } from '@drizzle-team/tento';\n`];
+	const codegen: (string | undefined)[] = [
+		`import { metaobject${metafieldsIntrospection.length ? ', metafield' : ''} } from '@drizzle-team/tento';\n`,
+	];
 	for (const definition of metaobjectIntrospection) {
 		codegen.push(
 			`export const ${definition.type} = metaobject({`,
@@ -488,7 +490,9 @@ async function pull(args: Args) {
 					? `\tdescription: '${definition.description.replace("'", "\\'")}',`
 					: undefined,
 				!definition.pin ? undefined : `\tpin: ${definition.pin},`,
-				`\tfieldDefinition: (f) => f.${mapFieldName(definition.fieldDefinition.type)}(${mapMetafieldValidationsDefinition(definition.fieldDefinition)})`,
+				`\tfieldDefinition: (f) => f.${mapFieldName(
+					definition.fieldDefinition.type,
+				)}(${mapMetafieldValidationsDefinition(definition.fieldDefinition)})`,
 				'});\n',
 			);
 		}

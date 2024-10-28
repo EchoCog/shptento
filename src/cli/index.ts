@@ -1,12 +1,12 @@
 import path from 'node:path';
-import { object, record, string, type InferInput, optional } from 'valibot';
+import { object, record, string, type InferInput } from 'valibot';
 import { MetafieldDefinition } from '../client/metafield/types';
 import { Metafield } from '../client/metafield/metafield';
 import { Metaobject, MetaobjectDefinition } from '../client/metaobject';
 
 export async function readLocalSchema(schemaPath: string): Promise<{
-	metaobjectSchema: Record<string, MetaobjectDefinition>,
-	metafieldSchema: Record<string, MetafieldDefinition>,
+	metaobjectSchema: Record<string, MetaobjectDefinition>;
+	metafieldSchema: Record<string, MetafieldDefinition>;
 }> {
 	const importResult = await import(path.resolve(schemaPath));
 	const metaobjectSchema: Record<string, MetaobjectDefinition> = {};
@@ -30,7 +30,6 @@ export const configSchema = object({
 	schemaPath: string(),
 	shop: string(),
 	headers: record(string(), string()),
-	prefix: optional(string(), 'tento'),
 });
 
 export type Config = InferInput<typeof configSchema>;

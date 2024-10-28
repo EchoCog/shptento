@@ -1,50 +1,49 @@
 import '@shopify/shopify-api/adapters/node';
-import { LATEST_API_VERSION, Session, shopifyApi } from "@shopify/shopify-api";
+import { LATEST_API_VERSION, Session, shopifyApi } from '@shopify/shopify-api';
 import config from '../tento.config';
 import { beforeEach } from 'vitest';
 
 export async function initShopifyGQLClient() {
-    const shopify = shopifyApi({
-        apiKey: process.env['SHOPIFY_API_KEY']!,
-        apiSecretKey: process.env['SHOPIFY_API_SECRET_KEY']!,
-        scopes: [
-            'write_products',
-            'read_products',
-            'write_metaobject_definitions',
-            'read_metaobject_definitions',
-            'write_metaobjects',
-            'read_metaobjects',
-        ],
-        hostName: '1fbb-159-224-232-185.ngrok-free.app',
-        hostScheme: 'https',
-        apiVersion: LATEST_API_VERSION,
-        isEmbeddedApp: true,
-        future: {
-            lineItemBilling: true,
-            customerAddressDefaultFix: true,
-        },
-    });
+	const shopify = shopifyApi({
+		apiKey: process.env['SHOPIFY_API_KEY']!,
+		apiSecretKey: process.env['SHOPIFY_API_SECRET_KEY']!,
+		scopes: [
+			'write_products',
+			'read_products',
+			'write_metaobject_definitions',
+			'read_metaobject_definitions',
+			'write_metaobjects',
+			'read_metaobjects',
+		],
+		hostName: '1fbb-159-224-232-185.ngrok-free.app',
+		hostScheme: 'https',
+		apiVersion: LATEST_API_VERSION,
+		isEmbeddedApp: true,
+		future: {
+			lineItemBilling: true,
+			customerAddressDefaultFix: true,
+		},
+	});
 
-    const session = new Session({
-        id: `offline_${config.shop}.myshopify.com`,
-        shop: `${config.shop}.config.shop`,
-        state: '638921041849883',
-        isOnline: false,
-        accessToken: config.headers['X-Shopify-Access-Token'],
-        scope: 'write_metaobject_definitions,write_metaobjects,write_products',
-    });
+	const session = new Session({
+		id: `offline_${config.shop}.myshopify.com`,
+		shop: `${config.shop}.config.shop`,
+		state: '638921041849883',
+		isOnline: false,
+		accessToken: config.headers['X-Shopify-Access-Token'],
+		scope: 'write_metaobject_definitions,write_metaobjects,write_products',
+	});
 
-    return new shopify.clients.Graphql({ session });
+	return new shopify.clients.Graphql({ session });
 }
 
 export function skipTests(names: string[]) {
-    beforeEach((ctx) => {
-        if (names.includes(ctx.task.name)) {
-            ctx.skip();
-        }
-    });
+	beforeEach((ctx) => {
+		if (names.includes(ctx.task.name)) {
+			ctx.skip();
+		}
+	});
 }
-
 
 export const introspectMetaobjectDefinitionsQuery = `
     query Introspection {

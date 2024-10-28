@@ -1,16 +1,16 @@
 import { Client } from './gql-client';
 
 export const job = async ({
-    id,
-    client,
+	id,
+	client,
 }: {
-    id: string,
-    client: Client,
+	id: string;
+	client: Client;
 }): Promise<{
-    id: string,
-    done: boolean
+	id: string;
+	done: boolean;
 }> => {
-    const query = `
+	const query = `
         query GetJob ($id: ID!) {
             job(id: $id) {
               id
@@ -18,14 +18,14 @@ export const job = async ({
             }
         }`;
 
-    const result = await client(query, { id });
+	const result = await client(query, { id });
 
-    if (result.errors) {
-        throw new Error(result.errors.graphQLErrors?.map((e) => e.message).join('\n'));
-    }
+	if (result.errors) {
+		throw new Error(result.errors.graphQLErrors?.map((e) => e.message).join('\n'));
+	}
 
-    return {
-        id: String(result.data.job.id),
-        done: Boolean(result.data.job.done),
-    }
-}
+	return {
+		id: String(result.data.job.id),
+		done: Boolean(result.data.job.done),
+	};
+};

@@ -6,5 +6,4 @@ export default defineConfig({
 	headers: {
 		'X-Shopify-Access-Token': process.env['SHOPIFY_ADMIN_API_TOKEN']!,
 	},
-	prefix: 'tento_test',
 });

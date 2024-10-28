@@ -14,11 +14,13 @@ export type Simplify<T> = {
 export type InferBaseModel<T extends MetaobjectDefinitionConfig> = ReturnType<
 	T['fieldDefinitions']
 > extends infer TFields extends Record<string, Field<any, any>>
-	? Simplify<{
-		[K in keyof TFields & string as RequiredKeyOnly<K, TFields>]: TFields[K]['_']['type'];
-	} & {
-		[K in keyof TFields & string as OptionalKeyOnly<K, TFields>]: TFields[K]['_']['type'] | null;
-	}>
+	? Simplify<
+			{
+				[K in keyof TFields & string as RequiredKeyOnly<K, TFields>]: TFields[K]['_']['type'];
+			} & {
+				[K in keyof TFields & string as OptionalKeyOnly<K, TFields>]: TFields[K]['_']['type'] | null;
+			}
+	  >
 	: never;
 
 export type InferSelectModel<TBase> = Simplify<
@@ -30,9 +32,10 @@ export type InferSelectModel<TBase> = Simplify<
 	} & TBase
 >;
 
-export type RequiredKeyOnly<TKey extends string, TFields extends Record<string, Field<any, any>>> =
-	TFields[TKey]['_']['required'] extends true ? TKey
-	: never;
+export type RequiredKeyOnly<
+	TKey extends string,
+	TFields extends Record<string, Field<any, any>>,
+> = TFields[TKey]['_']['required'] extends true ? TKey : never;
 
 export type OptionalKeyOnly<
 	TKey extends string,
@@ -42,11 +45,13 @@ export type OptionalKeyOnly<
 export type InferInsertModel<T extends MetaobjectDefinitionConfig> = ReturnType<
 	T['fieldDefinitions']
 > extends infer TFields extends Record<string, Field<any, any>>
-	? Simplify<{
-		[K in keyof TFields & string as RequiredKeyOnly<K, TFields>]: TFields[K]['_']['type'];
-	} & {
-		[K in keyof TFields & string as OptionalKeyOnly<K, TFields>]?: TFields[K]['_']['type'];
-	}>
+	? Simplify<
+			{
+				[K in keyof TFields & string as RequiredKeyOnly<K, TFields>]: TFields[K]['_']['type'];
+			} & {
+				[K in keyof TFields & string as OptionalKeyOnly<K, TFields>]?: TFields[K]['_']['type'];
+			}
+	  >
 	: never;
 
 export type InferUpdateModel<TBase> = Simplify<
@@ -93,7 +98,7 @@ export interface MetaobjectFieldDefinitions {
 /** The input fields for creating a metaobject field definition. */
 export interface MetaobjectFieldDefinitionConfig<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput> = Record<string, never>,
-	TRequired extends boolean = boolean
+	TRequired extends boolean = boolean,
 > {
 	/** An administrative description of the field. */
 	description?: string;
@@ -131,11 +136,11 @@ export type MetaobjectFieldType =
 	| 'volume'
 	| 'list.volume'
 	| 'weight'
-	| 'list.weight'
+	| 'list.weight';
 
 export interface MetaobjectFieldDefinitionConfigWithType<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput>,
-	TRequiered extends boolean = false
+	TRequiered extends boolean = false,
 > extends MetaobjectFieldDefinitionConfig<TValidators, TRequiered> {
 	type: MetaobjectFieldType; // should be in type!!!
 }
@@ -181,22 +186,22 @@ export type ListConfigFields<T extends Metaobject<any>> = {
 export type ListConfigQuery =
 	| string
 	| {
-		displayName?: ListConfigQueryItem<string>;
-		updatedAt?: ListConfigQueryItem<Date | string>;
-		// TODO() Add handle + id
-	}
+			displayName?: ListConfigQueryItem<string>;
+			updatedAt?: ListConfigQueryItem<Date | string>;
+			// TODO() Add handle + id
+	  }
 	| {
-		/**
-		 * A raw query string to be used as-is in the request. Incompatible with other query properties.
-		 */
-		$raw: string;
-	}
+			/**
+			 * A raw query string to be used as-is in the request. Incompatible with other query properties.
+			 */
+			$raw: string;
+	  }
 	| {
-		/**
-		 * A list of queries that are combined with `OR`.
-		 */
-		$or: ListConfigQuery[];
-	}
+			/**
+			 * A list of queries that are combined with `OR`.
+			 */
+			$or: ListConfigQuery[];
+	  }
 	| ListConfigQuery[];
 
 export interface ListConfig<T extends Metaobject<any>> {
@@ -234,18 +239,18 @@ export type ResultItem<
 > = TFields extends undefined
 	? T['$inferSelect']
 	: TFields[keyof TFields] extends false
-	? {
-		[K in Exclude<keyof T['$inferSelect'], keyof TFields>]: T['$inferSelect'][K];
-	}
-	: Simplify<
-		{
-			// @ts-expect-error
-			[K in keyof TFields as TFields[K] extends true ? K : never]: T['$inferSelect'][K];
-		} & {
-			[K2 in keyof TFields as boolean extends TFields[K2] ? K2 : never]: ShopifizzleTypeError<`'${K2 &
-				string}' must be either static true or static false, not a dynamic value`>;
-		}
-	>;
+	  ? {
+				[K in Exclude<keyof T['$inferSelect'], keyof TFields>]: T['$inferSelect'][K];
+		  }
+	  : Simplify<
+				{
+					// @ts-expect-error
+					[K in keyof TFields as TFields[K] extends true ? K : never]: T['$inferSelect'][K];
+				} & {
+					[K2 in keyof TFields as boolean extends TFields[K2] ? K2 : never]: ShopifizzleTypeError<`'${K2 &
+						string}' must be either static true or static false, not a dynamic value`>;
+				}
+		  >;
 
 export type ListResult<T extends Metaobject<any>, TFields extends ListConfigFields<T> | undefined> = Simplify<{
 	items: ResultItem<T, TFields>[];

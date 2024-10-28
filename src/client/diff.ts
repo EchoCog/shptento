@@ -7,17 +7,16 @@ import {
 	MutationMetaobjectDefinitionUpdateArgs,
 } from '../graphql/gen/graphql';
 import { Client } from './gql-client';
-import { MetafieldDefinition, MetafieldDefinitionUpdateInput, MutationMetafieldDefinitionCreateArgs, MutationMetafieldDefinitionUpdateArgs } from './metafield/types';
+import {
+	MetafieldDefinition,
+	MetafieldDefinitionUpdateInput,
+	MutationMetafieldDefinitionCreateArgs,
+	MutationMetafieldDefinitionUpdateArgs,
+} from './metafield/types';
 import { MetaobjectDefinition, MetaobjectFieldDefinition } from './metaobject/types';
 import { MetafieldDefinitionValidationInput } from './types';
 
-export async function introspectMetaobjectRemoteSchema({
-	client,
-	prefix
-}: {
-	client: Client,
-	prefix: string
-}) {
+export async function introspectMetaobjectRemoteSchema(client: Client) {
 	const introspectionQuery = graphql(`
 		query Introspection {
 			metaobjectDefinitions(first: 100) {
@@ -48,34 +47,32 @@ export async function introspectMetaobjectRemoteSchema({
 	if (introspectionResult.errors?.graphQLErrors?.length) {
 		throw new Error(introspectionResult.errors.graphQLErrors[0].message);
 	}
-	const introspectedMetaobjectsList = introspectionResult.data!.metaobjectDefinitions.nodes
-		.filter(node => node.type.startsWith(prefix))
-		.map((node) => {
-			return {
-				...node,
-				fieldDefinitions: node.fieldDefinitions.map((field) => {
-					return {
-						...field,
-						type: field.type.name,
-					};
-				}),
-			};
-		});
+	const introspectedMetaobjectsList = introspectionResult.data!.metaobjectDefinitions.nodes.map((node) => {
+		return {
+			...node,
+			fieldDefinitions: node.fieldDefinitions.map((field) => {
+				return {
+					...field,
+					type: field.type.name,
+				};
+			}),
+		};
+	});
 
 	return introspectedMetaobjectsList;
 }
 
-export type MetaobjectIntrospection = ReturnType<typeof introspectMetaobjectRemoteSchema> extends Promise<infer T> ? T : never;
+export type MetaobjectIntrospection = ReturnType<typeof introspectMetaobjectRemoteSchema> extends Promise<infer T>
+	? T
+	: never;
 
 // TODO() Do we need to compare not only field definitions ???
 export function diffSchemas({
 	local,
 	remote,
-	prefix,
 }: {
-	local: Record<string, MetaobjectDefinition>,
-	remote: MetaobjectIntrospection,
-	prefix: string,
+	local: Record<string, MetaobjectDefinition>;
+	remote: MetaobjectIntrospection;
 }): {
 	create: MutationMetaobjectDefinitionCreateArgs[];
 	update: MutationMetaobjectDefinitionUpdateArgs[];
@@ -93,13 +90,12 @@ export function diffSchemas({
 	};
 
 	for (const localDef of localDefs) {
-		const remoteDef = remote.find((metaobject) => metaobject.type === `${prefix}_${localDef.type}`);
+		const remoteDef = remote.find((metaobject) => metaobject.type === localDef.type);
 		if (!remoteDef) {
 			result.create.push({
 				definition: {
 					...localDef,
-					type: `${prefix}_${localDef.type}`,
-				}
+				},
 			});
 		} else {
 			const diff = diffMetaobjectDefinitions(localDef, remoteDef);
@@ -110,7 +106,7 @@ export function diffSchemas({
 	}
 
 	for (const introspectedMetaobject of remote) {
-		const schemaMetaobject = localDefs.find((value) => `${prefix}_${value.type}` === introspectedMetaobject.type);
+		const schemaMetaobject = localDefs.find((value) => value.type === introspectedMetaobject.type);
 		if (!schemaMetaobject) {
 			result.delete.push(introspectedMetaobject.id);
 		}
@@ -121,10 +117,10 @@ export function diffSchemas({
 
 /**
  * Difference only between fieldDefinitions()
- * 
- * @param local 
- * @param remote 
- * @returns 
+ *
+ * @param local
+ * @param remote
+ * @returns
  */
 export function diffMetaobjectDefinitions(
 	local: MetaobjectDefinition,
@@ -200,40 +196,34 @@ export function diffFields(
 
 	return Object.keys(updates).length > 0
 		? {
-			key: localField.key,
-			...updates,
-		}
+				key: localField.key,
+				...updates,
+		  }
 		: undefined;
 }
 
 /**
  * For now allows only to introspect @PRODUCT ownerType
- * 
+ *
  * @param client GQL Shopify Client
  * @returns Introspected Metafield list
  */
 export interface IMetafieldDefition {
-	id: string,
-	name: string,
-	key: string,
-	namespace: string,
-	description: string,
-	pin: boolean,
-	ownerType: `${MetafieldOwnerType}`,
-	useAsCollectionCondition: boolean,
+	id: string;
+	name: string;
+	key: string;
+	namespace: string;
+	description: string;
+	pin: boolean;
+	ownerType: `${MetafieldOwnerType}`;
+	useAsCollectionCondition: boolean;
 	fieldDefinition: {
-		type: string,
-		validations: { name: string, value: string | null }[],
-	}
+		type: string;
+		validations: { name: string; value: string | null }[];
+	};
 }
 // TOOD() No need to get metaobject type for reference on push/ applySchema(), only on pull
-export async function introspectMetafieldRemoteSchema({
-	client,
-	prefix
-}: {
-	client: Client,
-	prefix: string
-}) {
+export async function introspectMetafieldRemoteSchema(client: Client) {
 	const introspectionQuery = `
 		query Introspection($query: String) {
 			metafieldDefinitions(first: 100, ownerType: PRODUCT, query: $query) {
@@ -259,41 +249,44 @@ export async function introspectMetafieldRemoteSchema({
 	/**
 	 * Get all metafields with namespace starts with prefix
 	 */
-	const introspectionResult = await client(introspectionQuery, {
-		query: `namespace:${prefix}*`,
-	});
+	const introspectionResult = await client(introspectionQuery);
 	if (introspectionResult.errors?.graphQLErrors?.length) {
 		throw new Error(introspectionResult.errors.graphQLErrors[0].message);
 	}
 
 	const referencedMetaobjects: {
-		id: string,
-		metaobjectId: string,
+		id: string;
+		metaobjectId: string;
 	}[] = [];
-	const introspectedMetaobjectsList: IMetafieldDefition[] = introspectionResult.data!.metafieldDefinitions.nodes.map((node: any) => {
-		const metaConf: IMetafieldDefition = {
-			id: node.id,
-			name: node.name,
-			key: node.key,
-			namespace: node.namespace,
-			description: node.description,
-			pin: typeof node.pinnedPosition === 'number',
-			ownerType: node.ownerType satisfies `${MetafieldOwnerType}`, // check it
-			useAsCollectionCondition: node.useAsCollectionCondition,
-			fieldDefinition: {
-				type: node.type.name,
-				validations: node.validations,
-			},
-		};
+	const introspectedMetaobjectsList: IMetafieldDefition[] = introspectionResult.data!.metafieldDefinitions.nodes.map(
+		(node: any) => {
+			const metaConf: IMetafieldDefition = {
+				id: node.id,
+				name: node.name,
+				key: node.key,
+				namespace: node.namespace,
+				description: node.description,
+				pin: typeof node.pinnedPosition === 'number',
+				ownerType: node.ownerType satisfies `${MetafieldOwnerType}`, // check it
+				useAsCollectionCondition: node.useAsCollectionCondition,
+				fieldDefinition: {
+					type: node.type.name,
+					validations: node.validations,
+				},
+			};
 
-		// TODO() change it
-		if (metaConf.fieldDefinition.type === 'metaobject_reference') {
-			referencedMetaobjects.push(...metaConf.fieldDefinition.validations
-				.map(val => { return { id: metaConf.id, metaobjectId: val.value! } }))
-		}
+			// TODO() change it
+			if (metaConf.fieldDefinition.type === 'metaobject_reference') {
+				referencedMetaobjects.push(
+					...metaConf.fieldDefinition.validations.map((val) => {
+						return { id: metaConf.id, metaobjectId: val.value! };
+					}),
+				);
+			}
 
-		return metaConf;
-	});
+			return metaConf;
+		},
+	);
 
 	if (referencedMetaobjects.length) {
 		const query = `
@@ -310,8 +303,10 @@ export async function introspectMetafieldRemoteSchema({
 				throw new Error(result.errors.graphQLErrors[0].message);
 			}
 
-			const metafield = introspectedMetaobjectsList.find(introMeta => introMeta.id === referencedMeta.id)!;
-			const validation = metafield.fieldDefinition.validations.find(val => val.value === referencedMeta.metaobjectId)!;
+			const metafield = introspectedMetaobjectsList.find((introMeta) => introMeta.id === referencedMeta.id)!;
+			const validation = metafield.fieldDefinition.validations.find(
+				(val) => val.value === referencedMeta.metaobjectId,
+			)!;
 
 			validation.value = result.data.metaobjectDefinition.type;
 		}
@@ -320,18 +315,18 @@ export async function introspectMetafieldRemoteSchema({
 	return introspectedMetaobjectsList;
 }
 
-export type MetafieldIntrospection = ReturnType<typeof introspectMetafieldRemoteSchema> extends Promise<infer T> ? T : never;
+export type MetafieldIntrospection = ReturnType<typeof introspectMetafieldRemoteSchema> extends Promise<infer T>
+	? T
+	: never;
 
 export async function setMetaobjectIdFor({
 	client,
 	validations,
-	prefix,
 }: {
-	client: Client,
-	validations: MetafieldDefinitionValidationInput[],
-	prefix: string,
+	client: Client;
+	validations: MetafieldDefinitionValidationInput[];
 }): Promise<void> {
-	for (let validation of validations) {
+	for (const validation of validations) {
 		const getMetaobjectId = `
 			query GetMetaobjectDefinitionByType($type: String!) {
 				metaobjectDefinitionByType(type: $type) {
@@ -340,7 +335,7 @@ export async function setMetaobjectIdFor({
 			}
 		`;
 
-		const result = await client(getMetaobjectId, { type: `${prefix}_${validation.value}` });
+		const result = await client(getMetaobjectId, { type: validation.value });
 		if (result.errors?.graphQLErrors?.length) {
 			throw new Error(result.errors.graphQLErrors[0].message);
 		}
@@ -352,11 +347,9 @@ export async function setMetaobjectIdFor({
 export function diffMetafieldSchemas({
 	local,
 	remote,
-	prefix,
 }: {
-	local: Record<string, MetafieldDefinition>,
-	remote: MetafieldIntrospection,
-	prefix: string
+	local: Record<string, MetafieldDefinition>;
+	remote: MetafieldIntrospection;
 }): {
 	create: MutationMetafieldDefinitionCreateArgs[];
 	update: MutationMetafieldDefinitionUpdateArgs[];
@@ -374,8 +367,12 @@ export function diffMetafieldSchemas({
 	};
 
 	for (const localDef of localDefs) {
-		const remoteDef = remote.find((metafield) =>
-			`${metafield.namespace}.${metafield.key}` === `${localDef.namespace ? `${prefix}_${localDef.namespace}` : prefix}.${localDef.key}`);
+		const remoteDef = remote.find(
+			(metafield) =>
+				// TODO() check it, shopify usually add 'custom' as namespace if not specified
+				`${metafield.namespace}.${metafield.key}` ===
+				`${localDef.namespace ? `${localDef.namespace}` : 'custom'}.${localDef.key}`,
+		);
 		if (!remoteDef) {
 			result.create.push({
 				definition: {
@@ -385,14 +382,14 @@ export function diffMetafieldSchemas({
 					ownerType: localDef.ownerType,
 					description: localDef.description,
 					name: localDef.name,
-					namespace: localDef.namespace ? `${prefix}_${localDef.namespace}` : prefix,
+					namespace: localDef.namespace ? localDef.namespace : 'custom',
 					pin: localDef.pin,
 					useAsCollectionCondition: localDef.useAsCollectionCondition,
 					validations: localDef.fieldDefinition.validations,
-				}
+				},
 			});
 		} else {
-			const diff = diffMetafieldDefinitions({ localField: localDef, remoteField: remoteDef, prefix });
+			const diff = diffMetafieldDefinitions({ localField: localDef, remoteField: remoteDef });
 			if (diff) {
 				result.update.push({ definition: diff, id: diff.id! });
 			}
@@ -400,8 +397,11 @@ export function diffMetafieldSchemas({
 	}
 
 	for (const introspectedMetafield of remote) {
-		const schemaMetaobject = localDefs.find((value) =>
-			`${value.namespace ? `${prefix}_${value.namespace}` : prefix}.${value.key}` === `${introspectedMetafield.namespace}.${introspectedMetafield.key}`);
+		const schemaMetaobject = localDefs.find(
+			(value) =>
+				`${value.namespace ? `${value.namespace}` : 'custom'}.${value.key}` ===
+				`${introspectedMetafield.namespace}.${introspectedMetafield.key}`,
+		);
 		if (!schemaMetaobject) {
 			result.delete.push(introspectedMetafield.id);
 		}
@@ -414,13 +414,10 @@ type PartialMetafieldDefinitionUpdateInput = Partial<MetafieldDefinitionUpdateIn
 export function diffMetafieldDefinitions({
 	localField,
 	remoteField,
-	prefix,
 }: {
-	localField: MetafieldDefinition,
-	remoteField: MetafieldIntrospection[number],
-	prefix: string,
-}
-): MetafieldDefinitionUpdateInput | undefined {
+	localField: MetafieldDefinition;
+	remoteField: MetafieldIntrospection[number];
+}): MetafieldDefinitionUpdateInput | undefined {
 	const partialUpdateInput: PartialMetafieldDefinitionUpdateInput = {};
 
 	if (localField.key !== remoteField.key) {
@@ -445,7 +442,7 @@ export function diffMetafieldDefinitions({
 		partialUpdateInput.pin = localPin;
 	}
 
-	const localNamespace = localField.namespace ? `${prefix}_${localField.namespace}` : prefix;
+	const localNamespace = localField.namespace ? localField.namespace : 'custom';
 	if (localNamespace !== remoteField.namespace) {
 		partialUpdateInput.namespace = localField.namespace;
 	}
@@ -458,13 +455,8 @@ export function diffMetafieldDefinitions({
 	}
 
 	// TODO() If validiation exists + name is metaobject_definition_id -> map to ${prefix}_${value}
-	const sortedLocalValidations = localField.fieldDefinition.validations?.map(validation => {
-		if (validation.name === 'metaobject_definition_id') {
-			validation.value = `${prefix}_${validation.value}`;
-		}
-
-		return validation;
-	}).sort((a, b) => a.name.localeCompare(b.name)) ?? [];
+	const sortedLocalValidations =
+		localField.fieldDefinition.validations?.sort((a, b) => a.name.localeCompare(b.name)) ?? [];
 	const sortedRemoteValidations = remoteField.fieldDefinition.validations?.sort((a, b) => a.name.localeCompare(b.name));
 
 	if (
@@ -485,7 +477,6 @@ export function diffMetafieldDefinitions({
 		};
 
 		return updates;
-	} else {
-		return undefined;
 	}
+	return undefined;
 }
