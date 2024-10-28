@@ -83,7 +83,8 @@ export async function applySchema({
 		!diffMetaobjects.create.length &&
 		!diffMetaobjects.update.length &&
 		!diffMetaobjects.delete.length &&
-		!diffMetafields.create.length && !diffMetafields.update.length &&
+		!diffMetafields.create.length &&
+		!diffMetafields.update.length &&
 		!diffMetafields.delete.length
 	) {
 		return;
@@ -209,7 +210,7 @@ const updateMetaobjectQuery = graphql(`
   }
 `);
 
-const deleteMetaobjectQuery = graphql(`
+export const deleteMetaobjectQuery = graphql(`
   mutation DeleteMetaobjectDefinition($id: ID!) {
     metaobjectDefinitionDelete(id: $id) {
       userErrors {
@@ -248,7 +249,7 @@ const updateMetafieldQuery = `
 	}
 `;
 
-const deleteMetafieldQuery = `
+export const deleteMetafieldQuery = `
 	mutation DeleteMetafieldDefinition($id: ID!) {
 		metafieldDefinitionDelete(id: $id) {
 			userErrors {

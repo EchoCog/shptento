@@ -6,6 +6,7 @@ import { type Client, ClientSource, createClientFromSource } from './gql-client'
 import { ExtractMetafieldSchema, ExtractMetaobjectSchema } from './types';
 import { ShopifyProductOperations } from './product/query';
 import { Metafield } from './metafield';
+import { removeSchema } from './remove-schema';
 
 export class Tento<
 	TMetaobjectSchema extends Record<string, Metaobject<any>>,
@@ -35,6 +36,16 @@ export class Tento<
 		unknownEntities: 'delete' | 'ignore';
 	}) {
 		await applySchema({
+			localSchema: this._.schema,
+			client: this._.client,
+			unknownEntities: config?.unknownEntities ?? 'ignore',
+		});
+	}
+
+	async removeSchema(config?: {
+		unknownEntities: 'delete' | 'ignore';
+	}) {
+		await removeSchema({
 			localSchema: this._.schema,
 			client: this._.client,
 			unknownEntities: config?.unknownEntities ?? 'ignore',
