@@ -1,5 +1,4 @@
 import { applySchema } from './apply-schema';
-import { job } from './common-objects';
 import { Metaobject } from './metaobject';
 import { ShopifyMetaobjectOperations } from './metaobject/query';
 import { type Client, ClientSource, createClientFromSource } from './gql-client';
@@ -7,6 +6,7 @@ import { ExtractMetafieldSchema, ExtractMetaobjectSchema } from './types';
 import { ShopifyProductOperations } from './product/query';
 import { Metafield } from './metafield';
 import { removeSchema } from './remove-schema';
+import { ShopifyJobOperations } from './common/query';
 
 export class Tento<
 	TMetaobjectSchema extends Record<string, Metaobject<any>>,
@@ -18,7 +18,8 @@ export class Tento<
 	};
 
 	metaobjects: TentoMetaobjectOperationsMap<TMetaobjectSchema>;
-	products: ShopifyProductOperations;
+	products: ShopifyProductOperations<TMetafieldSchema>;
+	jobs: ShopifyJobOperations;
 
 	constructor(client: Client, metaobjectSchema: TMetaobjectSchema, metafieldSchema: TMetafieldSchema) {
 		this._ = { client, schema: { ...metaobjectSchema, ...metafieldSchema } };
@@ -29,7 +30,8 @@ export class Tento<
 				new ShopifyMetaobjectOperations(metaobject, client),
 			]),
 		) as TentoMetaobjectOperationsMap<TMetaobjectSchema>;
-		this.products = new ShopifyProductOperations(client);
+		this.products = new ShopifyProductOperations(client, metafieldSchema);
+		this.jobs = new ShopifyJobOperations(client);
 	}
 
 	async applySchema(config?: {
@@ -49,16 +51,6 @@ export class Tento<
 			localSchema: this._.schema,
 			client: this._.client,
 			unknownEntities: config?.unknownEntities ?? 'ignore',
-		});
-	}
-
-	async job(id: string): Promise<{
-		id: string;
-		done: boolean;
-	}> {
-		return await job({
-			id,
-			client: this._.client,
 		});
 	}
 }

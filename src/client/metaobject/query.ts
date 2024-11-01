@@ -17,6 +17,7 @@ import type {
 } from '../../graphql/gen/graphql';
 import type { Client } from '../gql-client';
 import { KnownKeysOnly, ListConfigQueryItem } from '../types';
+import { ShopifyJobOperation } from '../common/query';
 
 const metaFields: Record<string, Field<any>> = {
 	_id: singleLineTextField(),
@@ -99,7 +100,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			.map((f) => (f in allSelectedFieldsMap ? `${f}: ${f.replace(/^_/, '')}` : undefined))
 			.filter((f) => f !== undefined)
 			.join(', ')}
-		${selectedFields.map((_, i) => `field${i}: field(key: "${_}") { value }`).join(', ')}`;
+		${selectedFields.map((key, i) => `field${i}: field(key: "${key}") { value }`).join(', ')}`;
 	}
 
 	async list<TConfig extends ListConfig<T>>(
@@ -465,7 +466,7 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		}
 	}
 
-	async bulkDelete(ids?: string[]): Promise<{ id: string; done: boolean }> {
+	async bulkDelete(ids?: string[]): Promise<ShopifyJobOperation> {
 		const query = `
 			mutation DeleteMetaobjects($ids: [ID!], $type: String) {
 				metaobjectBulkDelete(where: { ids: $ids, type: $type }) {
@@ -496,10 +497,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 			);
 		}
 
-		return {
-			id: String(result.data.metaobjectBulkDelete.job.id),
-			done: Boolean(result.data.metaobjectBulkDelete.job.done),
-		};
+		return new ShopifyJobOperation(
+			this.client,
+			String(result.data.metaobjectBulkDelete.job.id),
+			Boolean(result.data.metaobjectBulkDelete.job.done),
+		);
 	}
 }
 

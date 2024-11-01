@@ -92,26 +92,29 @@ async function main() {
 
 		const client = tento({ client: gqlClient, schema });
 
-		await client.applySchema();
+		await client.applySchema({ unknownEntities: 'ignore' });
 		const createdDesigner = await client.metaobjects.designer.insert({
 			name: 'Tento',
 			description: 'Made by Drizzle team',
 			website: 'https://www.google.com/',
 		});
 
-		const allProducts = await client.products.list({ id: 'id', metafield: schema.designer_reference }).query();
+		const allProducts = await client.products.list({
+			fields: {
+				id: true,
+				metafields: true,
+			},
+		});
 		if (allProducts.items?.length) {
-			const productsToUpdate = allProducts.items.filter((product) => typeof product.metafield === 'undefined');
+			const productsToUpdate = allProducts.items.filter(
+				(product) => typeof product.metafields === 'undefined' || product.metafields.length === 0,
+			);
 			for await (const product of productsToUpdate) {
-				await client.products.update(product.id).set({
+				await client.products.update(product.id, {
 					fields: {
-						metafields: [
-							{
-								metafield: schema.designer_reference,
-								value: createdDesigner._id,
-							},
-						],
-						tags: ['tento'],
+						metafields: {
+							Designer: createdDesigner._id,
+						},
 					},
 				});
 			}
@@ -149,20 +152,19 @@ async function main() {
 
 		const client = tento({ client: gqlClient, schema });
 
-		const tentoProducts = client.products
-			.list({
-				id: 'id',
-				title: 'title',
-				designerReference: schema.designer_reference,
-			})
-			.query({
-				first: 10,
-				query: {
-					tag: 'tento',
-				},
-			});
+		const productsWithMetafields = client.products.list({
+			first: 10,
+			query: {
+				tag: 'tento',
+			},
+			fields: {
+				id: true,
+				title: true,
+				metafields: true,
+			},
+		});
 
-		return res.json(tentoProducts);
+		return res.json(productsWithMetafields);
 	});
 
 	app.listen(5000, () => {

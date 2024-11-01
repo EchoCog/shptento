@@ -1,5 +1,5 @@
-import { MetafieldAccessGrant, MetafieldAdminAccess, MetafieldOwnerType } from '../../graphql/gen/graphql';
-import { MetafieldDefinitionValidationInput, Simplify } from '../types';
+import { MetafieldAccessGrant, MetafieldAdminAccess } from '../../graphql/gen/graphql';
+import { MetafieldDefinitionValidationInput, MetafieldOwnerType, Simplify } from '../types';
 import { Field, Fields } from './field';
 
 export type InferSelectModel<TBase> = Simplify<TBase>;
@@ -106,7 +106,7 @@ export type MetafieldFieldDefinitionBuilder = Omit<MetafieldFieldDefinition, 'ke
 	Partial<Pick<MetafieldFieldDefinition, 'key'>>;
 
 /** The input fields for creating a metaobject definition. */
-export type MetafieldDefinitionConfig = {
+export type MetafieldDefinitionConfig<TName extends string = string> = {
 	/** Access configuration for the metafields created with this definition. */
 	access?: MetafieldAccessInput;
 	/** An administrative description of the definition. */
@@ -115,7 +115,7 @@ export type MetafieldDefinitionConfig = {
 	 * The human-readable name for the metafield definition.
 	 *
 	 */
-	name: string;
+	name: TName;
 	/**
 	 * The key of the new field definition. This can't be changed.
 	 *
@@ -133,7 +133,7 @@ export type MetafieldDefinitionConfig = {
 	 * The resource type that the metafield definition is attached to.
 	 *
 	 */
-	ownerType: `${MetafieldOwnerType}`;
+	ownerType: MetafieldOwnerType;
 	/**
 	 * Whether to [pin](https://help.shopify.com/en/manual/custom-data/metafields/pinning-metafield-definitions?shpxid=50992205-75BA-4609-3F47-2325CF3B3B39) the metafield definition.
 	 *
@@ -182,7 +182,7 @@ export type MetafieldFieldType =
 export interface MetafieldFieldDefinitionConfigWithType<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput>,
 > extends MetafieldFieldDefinitionConfig<TValidators> {
-	type: MetafieldFieldType; // should be in type !!!
+	type: MetafieldFieldType;
 }
 
 export type MetafieldDefinitionInput = {
@@ -208,7 +208,7 @@ export type MetafieldDefinitionInput = {
 	 */
 	namespace?: string;
 	/** The resource type that the metafield definition is attached to. */
-	ownerType: `${MetafieldOwnerType}`;
+	ownerType: MetafieldOwnerType;
 	/**
 	 * Whether to [pin](https://help.shopify.com/manual/custom-data/metafields/pinning-metafield-definitions)
 	 * the metafield definition.
@@ -260,7 +260,7 @@ export type MetafieldDefinitionUpdateInput = {
 	 * but can't be updated itself.
 	 *
 	 */
-	ownerType: `${MetafieldOwnerType}`;
+	ownerType: MetafieldOwnerType;
 	/** Whether to pin the metafield definition. */
 	pin?: boolean;
 	/** Whether the metafield definition can be used as a collection condition. */

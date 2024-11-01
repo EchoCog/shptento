@@ -244,8 +244,9 @@ export type ResultItem<
 		  }
 	  : Simplify<
 				{
-					// @ts-expect-error
-					[K in keyof TFields as TFields[K] extends true ? K : never]: T['$inferSelect'][K];
+					[K in keyof TFields as TFields[K] extends true ? K : never]: K extends keyof T['$inferSelect']
+						? T['$inferSelect'][K]
+						: never;
 				} & {
 					[K2 in keyof TFields as boolean extends TFields[K2] ? K2 : never]: ShopifizzleTypeError<`'${K2 &
 						string}' must be either static true or static false, not a dynamic value`>;

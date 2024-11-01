@@ -3,7 +3,7 @@ import { MetafieldDefinition, MetafieldDefinitionConfig, MetafieldFieldDefinitio
 
 const isMetafieldSym = Symbol.for('tento:isMetafield');
 
-export class Metafield {
+export class Metafield<TName extends string = string> {
 	// @ts-expect-error - this symbol is used in the instanceof check below
 	private readonly [isMetafieldSym] = true;
 
@@ -14,7 +14,7 @@ export class Metafield {
 		readonly config: MetafieldDefinition;
 	};
 
-	constructor(config: MetafieldDefinitionConfig) {
+	constructor(config: MetafieldDefinitionConfig<TName>) {
 		this.field = config.fieldDefinition(fields);
 		const definition: MetafieldFieldDefinition = {
 			...this.field._.config,
@@ -39,6 +39,6 @@ export class Metafield {
 	}
 }
 
-export function metafield<T extends MetafieldDefinitionConfig>(config: T): Metafield {
-	return new Metafield(config);
+export function metafield<T extends MetafieldDefinitionConfig>(config: T & { name: T['name'] }): Metafield<T['name']> {
+	return new Metafield<T['name']>(config);
 }
