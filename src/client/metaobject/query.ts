@@ -103,6 +103,11 @@ export class ShopifyMetaobjectOperations<T extends Metaobject<any>> {
 		${selectedFields.map((key, i) => `field${i}: field(key: "${key}") { value }`).join(', ')}`;
 	}
 
+	list(): Promise<ListResult<T>>;
+	list<TConfig extends ListConfig<T>>(
+		config?: KnownKeysOnly<TConfig, ListConfig<T>>,
+	): Promise<ListResult<T, TConfig['fields']>>;
+
 	async list<TConfig extends ListConfig<T>>(
 		config?: KnownKeysOnly<TConfig, ListConfig<T>>,
 	): Promise<ListResult<T, TConfig['fields']>> {

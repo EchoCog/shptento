@@ -19,7 +19,7 @@ export abstract class Field<T, TRequired extends boolean = boolean> {
 
 	constructor(
 		config: MetaobjectFieldDefinitionConfigWithType<any, TRequired extends true ? true : false>,
-		validations: Validations,
+		validations?: Validations,
 	) {
 		this._ = {
 			config: buildMetaobjectFieldDefinition(config, validations),
@@ -47,24 +47,28 @@ export abstract class Field<T, TRequired extends boolean = boolean> {
 
 export function buildMetaobjectFieldDefinition(
 	config: MetaobjectFieldDefinitionConfigWithType<any, boolean>,
-	validations: Validations,
+	validations?: Validations,
 ): MetaobjectFieldDefinitionBuilder {
 	return {
 		...config,
-		validations: config.validations?.(validations),
+		validations: config.validations?.(validations) as any,
 	};
 }
 
 export const fields = {
 	singleLineTextField,
+	singleLineTextList,
 	multiLineTextField,
 	url,
+	urlList,
 	integer,
+	integerList,
 	decimal,
 	decimalList,
 	date,
 	dateList,
 	dateTime,
+	dateTimeList,
 	dimension,
 	dimensionList,
 	volume,
@@ -107,21 +111,18 @@ export const singleLineTextFieldValidations = {
 
 export type SingleLineTextFieldValidations = typeof singleLineTextFieldValidations;
 
-export class SingleLineTextListField extends Field<string[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<SingleLineTextListFieldValidations>, validations: Validations) {
-		super({ ...config, type: 'list.single_line_text_field' }, validations);
+export class SingleLineTextListField<TRequired extends boolean = false> extends Field<string[], TRequired> {
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.single_line_text_field' });
 	}
 }
 
-export function singleLineTextList<T extends MetaobjectFieldDefinitionConfig<SingleLineTextListFieldValidations>>(
-	config?: T,
-): SingleLineTextListField {
-	return new SingleLineTextListField(config ?? {}, singleLineTextListFieldValidations);
+export function singleLineTextList<
+	TRequired extends boolean,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
+>(config?: T): SingleLineTextListField<T['required'] extends true ? true : false> {
+	return new SingleLineTextListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const singleLineTextListFieldValidations = singleLineTextFieldValidations;
-
-export type SingleLineTextListFieldValidations = typeof singleLineTextListFieldValidations;
 
 export class MultiLineTextField<TRequired extends boolean = false> extends Field<string, TRequired> {
 	constructor(
@@ -195,11 +196,8 @@ export const decimalFieldValidations = {
 export type DecimalFieldValidations = typeof decimalFieldValidations;
 
 export class DecimalListField<TRequired extends boolean = false> extends Field<number[], TRequired> {
-	constructor(
-		config: MetaobjectFieldDefinitionConfig<DecimalListFieldValidations, TRequired extends true ? true : false>,
-		validations: Validations,
-	) {
-		super({ ...config, type: 'list.number_decimal' }, validations);
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.number_decimal' });
 	}
 
 	static override toAPIValue(value: number[]): string {
@@ -213,17 +211,10 @@ export class DecimalListField<TRequired extends boolean = false> extends Field<n
 
 export function decimalList<
 	TRequired extends boolean,
-	T extends MetaobjectFieldDefinitionConfig<DecimalListFieldValidations, TRequired extends true ? true : false>,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
 >(config?: T): DecimalListField<T['required'] extends true ? true : false> {
-	return new DecimalListField<T['required'] extends true ? true : false>(
-		(config as any) ?? {},
-		decimalListFieldValidations,
-	);
+	return new DecimalListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const decimalListFieldValidations = decimalFieldValidations;
-
-export type DecimalListFieldValidations = typeof decimalListFieldValidations;
 
 export class UrlField<TRequired extends boolean = false> extends Field<string, TRequired> {
 	constructor(
@@ -247,19 +238,18 @@ export const urlValidations = {
 
 export type UrlValidations = typeof urlValidations;
 
-export class UrlListField extends Field<string[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<UrlListValidations>, validations: Validations) {
-		super({ ...config, type: 'list.url' }, validations);
+export class UrlListField<TRequired extends boolean = false> extends Field<string[], TRequired> {
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.url' });
 	}
 }
 
-export function urlList<T extends MetaobjectFieldDefinitionConfig<UrlListValidations>>(config?: T): UrlListField {
-	return new UrlListField(config ?? {}, urlListValidations);
+export function urlList<
+	TRequired extends boolean,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
+>(config?: T): UrlListField<T['required'] extends true ? true : false> {
+	return new UrlListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const urlListValidations = urlValidations;
-
-export type UrlListValidations = typeof urlListValidations;
 
 export class IntegerField<TRequired extends boolean = false> extends Field<number, TRequired> {
 	constructor(
@@ -296,9 +286,9 @@ export const integerValidations = {
 
 export type IntegerValidations = typeof integerValidations;
 
-export class IntegerListField extends Field<number[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<IntegerListValidations>, validations: Validations) {
-		super({ ...config, type: 'list.number_integer' }, validations);
+export class IntegerListField<TRequired extends boolean = false> extends Field<number[], TRequired> {
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.number_integer' });
 	}
 
 	static override toAPIValue(value: number[]): string {
@@ -310,15 +300,12 @@ export class IntegerListField extends Field<number[]> {
 	}
 }
 
-export function integerList<T extends MetaobjectFieldDefinitionConfig<IntegerListValidations>>(
-	config?: T,
-): IntegerListField {
-	return new IntegerListField(config ?? {}, integerListValidations);
+export function integerList<
+	TRequired extends boolean,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
+>(config?: T): IntegerListField<T['required'] extends true ? true : false> {
+	return new IntegerListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const integerListValidations = integerValidations;
-
-export type IntegerListValidations = typeof integerListValidations;
 
 export class DateField<TRequired extends boolean = false> extends Field<Date, TRequired> {
 	constructor(
@@ -356,11 +343,8 @@ export const dateValidations = {
 export type DateValidations = typeof dateValidations;
 
 export class DateListField<TRequired extends boolean = false> extends Field<Date[], TRequired> {
-	constructor(
-		config: MetaobjectFieldDefinitionConfig<DateListValidations, TRequired extends true ? true : false>,
-		validations: Validations,
-	) {
-		super({ ...config, type: 'list.date' }, validations);
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.date' });
 	}
 
 	static override toAPIValue(value: Date[]): string {
@@ -374,14 +358,10 @@ export class DateListField<TRequired extends boolean = false> extends Field<Date
 
 export function dateList<
 	TRequired extends boolean,
-	T extends MetaobjectFieldDefinitionConfig<DateListValidations, TRequired extends true ? true : false>,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
 >(config?: T): DateListField<T['required'] extends true ? true : false> {
-	return new DateListField<T['required'] extends true ? true : false>((config as any) ?? {}, dateListValidations);
+	return new DateListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const dateListValidations = dateValidations;
-
-export type DateListValidations = typeof dateListValidations;
 
 export class DateTimeField<TRequired extends boolean = false> extends Field<Date, TRequired> {
 	constructor(
@@ -418,9 +398,9 @@ export const dateTimeValidations = {
 
 export type DateTimeValidations = typeof dateTimeValidations;
 
-export class DateTimeListField extends Field<Date[]> {
-	constructor(config: MetaobjectFieldDefinitionConfig<DateTimeListValidations>, validations: Validations) {
-		super({ ...config, type: 'list.date_time' }, validations);
+export class DateTimeListField<TRequired extends boolean = false> extends Field<Date[], TRequired> {
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.date_time' });
 	}
 
 	static override toAPIValue(value: Date[]): string {
@@ -432,15 +412,12 @@ export class DateTimeListField extends Field<Date[]> {
 	}
 }
 
-export function dateTimeList<T extends MetaobjectFieldDefinitionConfig<DateTimeListValidations>>(
-	config?: T,
-): DateTimeListField {
-	return new DateTimeListField(config ?? {}, dateTimeListValidations);
+export function dateTimeList<
+	TRequired extends boolean,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
+>(config?: T): DateTimeListField<T['required'] extends true ? true : false> {
+	return new DateTimeListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const dateTimeListValidations = dateTimeValidations;
-
-export type DateTimeListValidations = typeof dateTimeListValidations;
 
 export type DimensionUnit = 'METERS' | 'CENTIMETERS' | 'MILLIMETERS' | 'INCHES' | 'FEET' | 'YARDS';
 
@@ -486,11 +463,8 @@ export const dimensionValidations = {
 export type DimensionValidations = typeof dimensionValidations;
 
 export class DimensionListField<TRequired extends boolean = false> extends Field<DimensionFieldValue[], TRequired> {
-	constructor(
-		config: MetaobjectFieldDefinitionConfig<DimensionListValidations, TRequired extends true ? true : false>,
-		validations: Validations,
-	) {
-		super({ ...config, type: 'list.dimension' }, validations);
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.dimension' });
 	}
 
 	static override toAPIValue(value: DimensionFieldValue[]): string {
@@ -504,17 +478,10 @@ export class DimensionListField<TRequired extends boolean = false> extends Field
 
 export function dimensionList<
 	TRequired extends boolean,
-	T extends MetaobjectFieldDefinitionConfig<DimensionListValidations, TRequired extends true ? true : false>,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
 >(config?: T): DimensionListField<T['required'] extends true ? true : false> {
-	return new DimensionListField<T['required'] extends true ? true : false>(
-		(config as any) ?? {},
-		dimensionListValidations,
-	);
+	return new DimensionListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const dimensionListValidations = dimensionValidations;
-
-export type DimensionListValidations = typeof dimensionListValidations;
 
 export type VolumeUnit =
 	| 'MILLILITERS'
@@ -568,11 +535,8 @@ export const volumeValidations = {
 export type VolumeValidations = typeof volumeValidations;
 
 export class VolumeListField<TRequired extends boolean = false> extends Field<VolumeFieldValue[], TRequired> {
-	constructor(
-		config: MetaobjectFieldDefinitionConfig<VolumeListValidations, TRequired extends true ? true : false>,
-		validations: Validations,
-	) {
-		super({ ...config, type: 'list.volume' }, validations);
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.volume' });
 	}
 
 	static override toAPIValue(value: VolumeFieldValue[]): string {
@@ -586,14 +550,10 @@ export class VolumeListField<TRequired extends boolean = false> extends Field<Vo
 
 export function volumeList<
 	TRequired extends boolean,
-	T extends MetaobjectFieldDefinitionConfig<VolumeListValidations, TRequired extends true ? true : false>,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
 >(config?: T): VolumeListField<T['required'] extends true ? true : false> {
-	return new VolumeListField<T['required'] extends true ? true : false>((config as any) ?? {}, volumeListValidations);
+	return new VolumeListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const volumeListValidations = volumeValidations;
-
-export type VolumeListValidations = typeof volumeListValidations;
 
 export type WeightUnit = 'KILOGRAMS' | 'GRAMS' | 'POUNDS' | 'OUNCES';
 
@@ -639,11 +599,8 @@ export const weightValidations = {
 export type WeightValidations = typeof weightValidations;
 
 export class WeightListField<TRequired extends boolean = false> extends Field<WeightFieldValue[], TRequired> {
-	constructor(
-		config: MetaobjectFieldDefinitionConfig<WeightListValidations, TRequired extends true ? true : false>,
-		validations: Validations,
-	) {
-		super({ ...config, type: 'list.weight' }, validations);
+	constructor(config: MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>) {
+		super({ ...(config as any), type: 'list.weight' });
 	}
 
 	static override toAPIValue(value: WeightFieldValue[]): string {
@@ -657,11 +614,7 @@ export class WeightListField<TRequired extends boolean = false> extends Field<We
 
 export function weightList<
 	TRequired extends boolean,
-	T extends MetaobjectFieldDefinitionConfig<WeightListValidations, TRequired extends true ? true : false>,
+	T extends Omit<MetaobjectFieldDefinitionConfig<never, TRequired extends true ? true : false>, 'validations'>,
 >(config?: T): WeightListField<T['required'] extends true ? true : false> {
-	return new WeightListField<T['required'] extends true ? true : false>((config as any) ?? {}, weightListValidations);
+	return new WeightListField<T['required'] extends true ? true : false>((config as any) ?? {});
 }
-
-export const weightListValidations = weightValidations;
-
-export type WeightListValidations = typeof weightListValidations;

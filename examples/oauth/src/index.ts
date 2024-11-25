@@ -1,25 +1,16 @@
 import 'dotenv/config';
 import '@shopify/shopify-api/adapters/node';
-import cookieParser from 'cookie-parser';
 import express from 'express';
 import { CookieNotFound, InvalidOAuthError, LATEST_API_VERSION, Session, shopifyApi } from '@shopify/shopify-api';
 import * as schema from './schema';
-import { parseEnv, z } from 'znv';
 import { tento } from '@drizzle-team/tento';
 
-const env = parseEnv(process.env, {
-	SHOPIFY_API_KEY: z.string(),
-	SHOPIFY_API_SECRET_KEY: z.string(),
-	SHOPIFY_SCOPES: z.string().transform((scopes) => scopes.split(/,\s*/)),
-	SHOPIFY_SHOP: z.string(),
-});
-
 const shopify = shopifyApi({
-	apiKey: env.SHOPIFY_API_KEY,
-	apiSecretKey: env.SHOPIFY_API_SECRET_KEY,
-	scopes: env.SHOPIFY_SCOPES as string[],
-	hostName: 'localhost:3000', // ngrok link
-	hostScheme: 'http', // https for ngrok
+	apiKey: process.env.SHOPIFY_API_KEY!,
+	apiSecretKey: process.env.SHOPIFY_API_SECRET_KEY!,
+	scopes: process.env.SHOPIFY_SCOPES!.split(/,\s*/),
+	hostName: '***.ngrok-free.app', // ngrok link
+	hostScheme: 'https', // https for ngrok
 	apiVersion: LATEST_API_VERSION,
 	isEmbeddedApp: true,
 });
@@ -27,14 +18,15 @@ const shopify = shopifyApi({
 async function main() {
 	const app = express();
 
-	app.use(cookieParser());
 	app.use(express.json());
 
+	// this is our future Shopify session
 	let session: Session | undefined = undefined;
+	const SHOPIFY_SHOP = process.env.SHOPIFY_SHOP!;
 
 	app.get('/auth', async (req, res) => {
 		await shopify.auth.begin({
-			shop: shopify.utils.sanitizeShop(env.SHOPIFY_SHOP, true)!,
+			shop: shopify.utils.sanitizeShop(SHOPIFY_SHOP, true)!,
 			callbackPath: '/auth/callback',
 			isOnline: false,
 			rawRequest: req,
@@ -53,17 +45,16 @@ async function main() {
 
 			return res.redirect('/');
 		} catch (e: any) {
-			console.log('err: ', e);
 			if (e instanceof InvalidOAuthError) {
 				return res.status(400).json({
 					status: 'ERROR',
-					message: 'express suka',
-					code: 200,
+					message: e.message,
+					code: 400,
 				});
 			}
 			if (e instanceof CookieNotFound) {
 				await shopify.auth.begin({
-					shop: shopify.utils.sanitizeShop(env.SHOPIFY_SHOP, true)!,
+					shop: shopify.utils.sanitizeShop(SHOPIFY_SHOP, true)!,
 					callbackPath: '/auth/callback',
 					isOnline: false,
 					rawRequest: req,
@@ -78,21 +69,14 @@ async function main() {
 			return res.redirect('/auth');
 		}
 
-		return res.json(session);
-	});
-
-	app.get('/apply', async (req, res) => {
-		if (!session) {
-			return res.redirect('/auth');
-		}
-
 		const gqlClient = new shopify.clients.Graphql({
 			session,
 		});
 
 		const client = tento({ client: gqlClient, schema });
 
-		await client.applySchema({ unknownEntities: 'ignore' });
+		await client.applySchema();
+
 		const createdDesigner = await client.metaobjects.designer.insert({
 			name: 'Tento',
 			description: 'Made by Drizzle team',

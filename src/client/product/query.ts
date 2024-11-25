@@ -1,7 +1,7 @@
 import { Client } from '../gql-client';
 import { Metafield } from '../metafield';
 import {
-	ListConfigFields,
+	ListConfigSelectFields,
 	UpdateConfig,
 	UpdateResultItem,
 	InferUpdatedMetafield,
@@ -11,6 +11,7 @@ import {
 	ListResult,
 	ResultItem,
 	InferSelectMetafield,
+	ListConfigUpdateFields,
 } from './types';
 import { KnownKeysOnly, ListConfigQueryItem } from '../types';
 
@@ -104,7 +105,7 @@ export class ShopifyProductOperations<TMetafieldSchema extends Record<string, Me
 		node: any,
 		updates: TUpdate,
 		selectedMetafields: Metafield[],
-	): UpdateResultItem<ListConfigFields<TUpdate['fields']>> {
+	): UpdateResultItem<ListConfigUpdateFields<TUpdate['fields']>> {
 		const result: Record<string, unknown> = {};
 
 		for (let i = 0; i < Object.keys(updates.fields).length; i++) {
@@ -135,7 +136,7 @@ export class ShopifyProductOperations<TMetafieldSchema extends Record<string, Me
 		return result as any;
 	}
 
-	private getSelectedFields(fields: ListConfigFields<InferSelectModel> | undefined): Record<string, true> {
+	private getSelectedFields(fields: ListConfigSelectFields<InferSelectModel> | undefined): Record<string, true> {
 		if (!fields) {
 			return [...Object.keys(this._.product)].reduce<Record<string, true>>((acc, key) => {
 				acc[key] = true;
@@ -336,7 +337,7 @@ export class ShopifyProductOperations<TMetafieldSchema extends Record<string, Me
 			.join(', ');
 	}
 
-	private mapGetItemResult<TFields extends ListConfigFields<InferSelectModel>>(
+	private mapGetItemResult<TFields extends ListConfigSelectFields<InferSelectModel>>(
 		node: any,
 		selectedFields: string[],
 	): ResultItem<TFields> {
@@ -410,7 +411,7 @@ export class ShopifyProductOperations<TMetafieldSchema extends Record<string, Me
 	async update<TUpdate extends UpdateConfig<TMetafieldSchema>>(
 		id: string,
 		updates: TUpdate,
-	): Promise<UpdateResultItem<ListConfigFields<TUpdate['fields']>>> {
+	): Promise<UpdateResultItem<ListConfigUpdateFields<TUpdate['fields']>>> {
 		const query = `
 			mutation ProductUpdate($input: ProductInput!) {
 				productUpdate(input: $input) {

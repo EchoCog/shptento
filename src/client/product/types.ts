@@ -888,7 +888,11 @@ export interface UpdateConfig<TMetafieldSchema extends Record<string, Metafield>
 	fields: InferUpdateModel<TMetafieldSchema>;
 }
 
-export type ListConfigFields<T extends InferSelectModel | InferUpdateModel<any>> = {
+export type ListConfigSelectFields<T extends InferSelectModel> = {
+	[K in keyof T]?: boolean | 0 | 1;
+};
+
+export type ListConfigUpdateFields<T extends InferUpdateModel<any>> = {
 	[K in keyof T]?: boolean | 0 | 1;
 };
 
@@ -1044,7 +1048,7 @@ export type SortKey =
 	| 'vendor';
 
 export interface ListConfig {
-	fields?: ListConfigFields<InferSelectModel>;
+	fields?: ListConfigSelectFields<InferSelectModel>;
 	query?: ListConfigQuery;
 	after?: string;
 	before?: string;
@@ -1147,7 +1151,7 @@ export type ProductDefinitionConfig = {
 	vendor: string;
 };
 
-export type ResultItem<TFields extends ListConfigFields<InferSelectModel> | Metafield | undefined> =
+export type ResultItem<TFields extends ListConfigSelectFields<InferSelectModel> | Metafield | undefined = undefined> =
 	TFields extends undefined
 		? Simplify<InferSelectModel>
 		: TFields[keyof TFields] extends false
@@ -1155,14 +1159,14 @@ export type ResultItem<TFields extends ListConfigFields<InferSelectModel> | Meta
 					[K in Exclude<keyof InferSelectModel, keyof TFields>]: InferSelectModel[K];
 			  }
 		  : Simplify<{
-					[K in keyof TFields]: TFields[K] extends Metafield
+					[K in keyof TFields as TFields[K] extends true ? K : never]: TFields[K] extends Metafield
 						? Simplify<InferSelectModel['metafields']>
 						: K extends keyof InferSelectModel
 						  ? Simplify<InferSelectModel[K]>
 						  : never;
 			  }>;
 
-export type UpdateResultItem<TFields extends ListConfigFields<InferUpdateModel<any>>> = Simplify<{
+export type UpdateResultItem<TFields extends ListConfigUpdateFields<InferUpdateModel<any>>> = Simplify<{
 	[K in keyof TFields]-?: K extends 'metafields'
 		? InferUpdatedMetafield[]
 		: K extends keyof InferUpdateModel<any>
@@ -1170,7 +1174,7 @@ export type UpdateResultItem<TFields extends ListConfigFields<InferUpdateModel<a
 		  : never;
 }>;
 
-export type ListResult<TFields extends ListConfigFields<InferSelectModel> | Metafield | undefined> = Simplify<{
+export type ListResult<TFields extends ListConfigSelectFields<InferSelectModel> | Metafield | undefined> = Simplify<{
 	items: ResultItem<TFields>[];
 	pageInfo: {
 		startCursor: string;

@@ -75,7 +75,7 @@ export type MetaobjectDefinitionConfig = {
 	/** A set of field definitions to create on this metaobject definition. */
 	fieldDefinitions: (fields: Fields) => Record<string, Field<any>>;
 	/** A human-readable name for the definition. This can be changed at any time. */
-	name?: string;
+	name: string;
 	/**
 	 * The type of the metaobject definition. This can't be changed.
 	 *
@@ -142,7 +142,7 @@ export interface MetaobjectFieldDefinitionConfigWithType<
 	TValidators extends Record<string, (...args: any[]) => MetafieldDefinitionValidationInput>,
 	TRequiered extends boolean = false,
 > extends MetaobjectFieldDefinitionConfig<TValidators, TRequiered> {
-	type: MetaobjectFieldType; // should be in type!!!
+	type: MetaobjectFieldType;
 }
 
 /** The input fields for creating a metaobject field definition. */
@@ -188,7 +188,8 @@ export type ListConfigQuery =
 	| {
 			displayName?: ListConfigQueryItem<string>;
 			updatedAt?: ListConfigQueryItem<Date | string>;
-			// TODO() Add handle + id
+			id?: ListConfigQueryItem<string>;
+			handle?: ListConfigQueryItem<string>;
 	  }
 	| {
 			/**
@@ -253,7 +254,10 @@ export type ResultItem<
 				}
 		  >;
 
-export type ListResult<T extends Metaobject<any>, TFields extends ListConfigFields<T> | undefined> = Simplify<{
+export type ListResult<
+	T extends Metaobject<any>,
+	TFields extends ListConfigFields<T> | undefined = undefined,
+> = Simplify<{
 	items: ResultItem<T, TFields>[];
 	pageInfo: {
 		startCursor: string;
