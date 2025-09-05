@@ -352,6 +352,20 @@ tento.metaobjects.designers.list({
 });
 ```
 
+## Technical Architecture Documentation
+
+For comprehensive technical documentation including system architecture, implementation details, and integration patterns, see the [Technical Architecture Documentation](./docs/README.md).
+
+### Quick Links
+
+- **[Architecture Overview](./docs/architecture-overview.md)** - High-level system components and relationships
+- **[Client Library Architecture](./docs/client-architecture.md)** - Internal structure and data flow
+- **[CLI Tool Architecture](./docs/cli-architecture.md)** - Command processing and schema management
+- **[GraphQL Integration](./docs/graphql-integration.md)** - API interaction patterns and data mapping
+- **[Schema Management](./docs/schema-management.md)** - Definition, validation, and synchronization flows
+- **[Authentication Flows](./docs/authentication-flows.md)** - OAuth and API key management
+- **[Error Handling](./docs/error-handling.md)** - Exception flows and validation patterns
+
 ## Roadmap
 
 - [x] Accept existing Shopify client instance
